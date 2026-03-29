@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String    @id @default(auto()) @map("_id") @db.ObjectId
+  username             String?   @unique
+  name                 String    @default("")
+  email                String    @unique
+  password             String
+  pin                  String?
+  emailVerified        Boolean   @default(false)
+  otpCode              String?
+  otpExpiresAt         DateTime?
+  profileComplete      Boolean   @default(false)
+  targetExam           String    @default("SSC CGL")
+  targetYear           Int       @default(2026)
+  dailyGoalMinutes     Int       @default(240)
+  streakCurrent        Int       @default(0)
+  streakLongest        Int       @default(0)
+  streakLastStudied    DateTime?
+  reminderEnabled      Boolean   @default(false)
+  reminderTime         String    @default("20:00")
+  reminderDays         Int[]     @default([1, 2, 3, 4, 5, 6, 0])
+  theme                String    @default("light")
+  notificationsEnabled Boolean   @default(true)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  sessions         Session[]
+  topicProgress    TopicProgress[]
+  tests            Test[]
+  justifications   Justification[]
+  dailyCommitments DailyCommitment[]
+}
+
+model Session {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String    @db.ObjectId
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject         String
+  topic           String
+  startTime       DateTime
+  endTime         DateTime?
+  durationMinutes Int       @default(0)
+  notes           String?
+  status          String    @default("active")
+  date            String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId, date])
+  @@index([userId, subject])
+}
+
+model TopicProgress {
+  id                    String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId                String    @db.ObjectId
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject               String
+  topicName             String
+  status                String    @default("not_started")
+  lastStudied           DateTime?
+  notes                 String?
+  difficulty            String    @default("medium")
+  totalTimeSpentMinutes Int       @default(0)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([userId, topicName])
+  @@index([userId, subject])
+}
+
+model Test {
+  id               String             @id @default(auto()) @map("_id") @db.ObjectId
+  userId           String             @db.ObjectId
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  testName         String
+  testType         String             @default("mock")
+  date             DateTime
+  totalQuestions   Int
+  attempted        Int
+  correct          Int
+  wrong            Int
+  score            Float
+  totalMarks       Float
+  accuracy         Int                @default(0)
+  timeTakenMinutes Int                @default(0)
+  notes            String?
+  rank             Int?
+  subjectScores    TestSubjectScore[]
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@index([userId])
+}
+
+model TestSubjectScore {
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  testId     String @db.ObjectId
+  test       Test   @relation(fields: [testId], references: [id], onDelete: Cascade)
+  subject    String
+  attempted  Int    @default(0)
+  correct    Int    @default(0)
+  wrong      Int    @default(0)
+  marks      Float  @default(0)
+  totalMarks Float  @default(0)
+}
+
+model Justification {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weekStart   String
+  daysStudied Int
+  reason      String
+  category    String   @default("other")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, weekStart])
+}
+
+model DailyCommitment {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String   @db.ObjectId
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date         String
+  status       String   @default("pending")
+  studyMinutes Int      @default(0)
+  youtubeLinks String[] @default([])
+  notes        String   @default("")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, date])
+}
