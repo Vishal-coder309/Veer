@@ -36,8 +36,9 @@ export const authAPI = {
 // Sessions
 export const sessionsAPI = {
   start: (data) => api.post('/sessions', data),
-  stop: (id) => api.put(`/sessions/${id}/stop`),
+  stop: (id, data) => api.put(`/sessions/${id}/stop`, data),
   pause: (id) => api.put(`/sessions/${id}/pause`),
+  resume: (id) => api.put(`/sessions/${id}/resume`),
   getToday: () => api.get('/sessions/today'),
   getAll: (params) => api.get('/sessions', { params }),
   getWeeklyStats: () => api.get('/sessions/weekly-stats'),

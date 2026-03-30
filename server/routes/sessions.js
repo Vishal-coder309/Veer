@@ -41,7 +41,18 @@ router.put('/:id/stop', protect, async (req, res) => {
     if (!existing) return res.status(404).json({ success: false, message: 'Session not found' });
 
     const endTime = new Date();
-    const durationMinutes = Math.round((endTime - new Date(existing.startTime)) / 60000);
+
+    // Use client-tracked elapsed time if provided (accurate — excludes paused time)
+    // Fall back to wall-clock diff if not provided
+    let durationMinutes;
+    if (req.body && req.body.elapsedSeconds != null) {
+      durationMinutes = Math.round(req.body.elapsedSeconds / 60);
+    } else {
+      durationMinutes = Math.round((endTime - new Date(existing.startTime)) / 60000);
+    }
+
+    // Ensure minimum 1 minute for any meaningful session
+    durationMinutes = Math.max(durationMinutes, 0);
 
     const session = await prisma.session.update({
       where: { id: req.params.id },
@@ -67,6 +78,24 @@ router.put('/:id/pause', protect, async (req, res) => {
     const session = await prisma.session.update({
       where: { id: req.params.id },
       data: { status: 'paused' },
+    });
+    res.json({ success: true, session });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// PUT /api/sessions/:id/resume
+router.put('/:id/resume', protect, async (req, res) => {
+  try {
+    const existing = await prisma.session.findFirst({
+      where: { id: req.params.id, userId: req.user.id },
+    });
+    if (!existing) return res.status(404).json({ success: false, message: 'Session not found' });
+
+    const session = await prisma.session.update({
+      where: { id: req.params.id },
+      data: { status: 'active' },
     });
     res.json({ success: true, session });
   } catch (err) {

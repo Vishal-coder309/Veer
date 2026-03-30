@@ -94,16 +94,22 @@ export default function StudySession() {
     }
   };
 
-  const handleResume = () => {
-    setStatus('active');
-    toast('Session resumed!', { icon: '▶️' });
+  const handleResume = async () => {
+    if (!sessionId) return;
+    try {
+      await sessionsAPI.resume(sessionId);
+      setStatus('active');
+      toast('Session resumed!', { icon: '▶️' });
+    } catch {
+      toast.error('Failed to resume session');
+    }
   };
 
   const handleStop = async () => {
     if (!sessionId) return;
     setLoading(true);
     try {
-      const res = await sessionsAPI.stop(sessionId);
+      const res = await sessionsAPI.stop(sessionId, { elapsedSeconds: elapsed });
       const duration = res.data.session.durationMinutes;
       setStatus('idle');
       setSessionId(null);
