@@ -47,16 +47,28 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [justificationData, setJustificationData] = useState(null); // non-null = show modal
 
-  useEffect(() => {
+  const fetchDashboard = () => {
     dashboardAPI.get()
       .then((res) => setData(res.data.dashboard))
       .catch(console.error)
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchDashboard();
+
+    // Refetch whenever the user comes back to this tab (e.g. after studying)
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') fetchDashboard();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
 
     // Check if justification is required (Thursday+ with < 3 study days)
     api.get('/justification/check')
       .then((res) => { if (res.data.required) setJustificationData(res.data); })
       .catch(() => {/* non-critical */});
+
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
   if (loading) {

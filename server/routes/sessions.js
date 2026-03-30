@@ -42,17 +42,17 @@ router.put('/:id/stop', protect, async (req, res) => {
 
     const endTime = new Date();
 
-    // Use client-tracked elapsed time if provided (accurate — excludes paused time)
+    // Use client-tracked elapsed seconds if provided (accurate — excludes paused time)
     // Fall back to wall-clock diff if not provided
-    let durationMinutes;
-    if (req.body && req.body.elapsedSeconds != null) {
-      durationMinutes = Math.round(req.body.elapsedSeconds / 60);
+    let elapsedSeconds;
+    if (req.body && req.body.elapsedSeconds != null && req.body.elapsedSeconds > 0) {
+      elapsedSeconds = Math.floor(req.body.elapsedSeconds);
     } else {
-      durationMinutes = Math.round((endTime - new Date(existing.startTime)) / 60000);
+      elapsedSeconds = Math.floor((endTime - new Date(existing.startTime)) / 1000);
     }
 
-    // Ensure minimum 1 minute for any meaningful session
-    durationMinutes = Math.max(durationMinutes, 0);
+    // Round up to nearest minute (so 27s = 1 min, not 0 min)
+    const durationMinutes = Math.max(1, Math.ceil(elapsedSeconds / 60));
 
     const session = await prisma.session.update({
       where: { id: req.params.id },
