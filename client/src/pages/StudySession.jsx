@@ -72,7 +72,7 @@ export default function StudySession() {
     setLoading(true);
     try {
       const res = await sessionsAPI.start({ subject, topic: finalTopic, notes });
-      setSessionId(res.data.session._id);
+      setSessionId(res.data.session.id);
       setStatus('active');
       setElapsed(0);
       toast.success(`Started: ${finalTopic}`);
