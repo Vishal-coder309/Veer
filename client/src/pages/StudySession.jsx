@@ -85,43 +85,46 @@ export default function StudySession() {
 
   const handlePause = async () => {
     if (!sessionId) return;
+    setStatus('paused'); // update UI immediately
+    toast('Session paused', { icon: '⏸️' });
     try {
       await sessionsAPI.pause(sessionId);
-      setStatus('paused');
-      toast('Session paused', { icon: '⏸️' });
-    } catch {
-      toast.error('Failed to pause');
+    } catch (err) {
+      console.error('Pause sync failed:', err?.response?.data || err.message);
     }
   };
 
   const handleResume = async () => {
     if (!sessionId) return;
+    setStatus('active'); // update UI immediately
+    toast('Session resumed!', { icon: '▶️' });
     try {
       await sessionsAPI.resume(sessionId);
-      setStatus('active');
-      toast('Session resumed!', { icon: '▶️' });
-    } catch {
-      toast.error('Failed to resume session');
+    } catch (err) {
+      console.error('Resume sync failed:', err?.response?.data || err.message);
     }
   };
 
   const handleStop = async () => {
     if (!sessionId) return;
     setLoading(true);
+    const elapsedAtStop = elapsed;
+    // Reset UI immediately so user isn't stuck
+    setStatus('idle');
+    setSessionId(null);
+    setElapsed(0);
+    setSubject('');
+    setTopic('');
+    setCustomTopic('');
+    setNotes('');
     try {
-      const res = await sessionsAPI.stop(sessionId, { elapsedSeconds: elapsed });
+      const res = await sessionsAPI.stop(sessionId, { elapsedSeconds: elapsedAtStop });
       const duration = res.data.session.durationMinutes;
-      setStatus('idle');
-      setSessionId(null);
-      setElapsed(0);
-      setSubject('');
-      setTopic('');
-      setCustomTopic('');
-      setNotes('');
       toast.success(`Session saved! ${duration} minutes logged 🎉`);
       await loadToday();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to stop session');
+      console.error('Stop failed:', err?.response?.data || err.message);
+      toast.error(err.response?.data?.message || 'Failed to save session');
     } finally {
       setLoading(false);
     }
@@ -278,7 +281,7 @@ export default function StudySession() {
         ) : (
           <div className="space-y-2">
             {todaySessions.filter((s) => s.status === 'completed').map((s) => (
-              <div key={s._id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-zinc-800">
+              <div key={s.id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-zinc-800">
                 <div>
                   <p className="text-sm font-semibold text-gray-900 dark:text-white">{s.topic}</p>
                   <p className="text-xs text-gray-400">{s.subject}</p>
