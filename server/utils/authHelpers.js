@@ -26,11 +26,11 @@ const verifyOtp = (plain, storedHash, expiresAt) => {
   return hashOtp(plain) === storedHash;
 };
 
-/** Generate a unique username from email prefix */
-async function buildUsername(email) {
-  const base = email
-    .split('@')[0]
+/** Generate a unique username from a name or email seed */
+async function buildUsername(seed) {
+  const base = String(seed || '')
     .toLowerCase()
+    .split('@')[0]
     .replace(/[^a-z0-9_]/g, '')
     .slice(0, 20) || 'user';
 

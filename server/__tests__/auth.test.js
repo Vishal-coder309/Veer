@@ -73,7 +73,7 @@ describe('POST /api/auth/register', () => {
     prisma.user.findUnique.mockResolvedValue(makeUser({ emailVerified: true }));
     const res = await request(app)
       .post('/api/auth/register')
-      .send({ email: 'test@veer.com', password: 'secret123' });
+      .send({ email: 'test@veer.com', password: 'secret123', firstName: 'Test', lastName: 'User' });
     expect(res.status).toBe(400);
     expect(res.body.message).toMatch(/already registered/i);
   });
@@ -83,7 +83,7 @@ describe('POST /api/auth/register', () => {
     prisma.user.create.mockResolvedValue(makeUser({ emailVerified: false }));
     const res = await request(app)
       .post('/api/auth/register')
-      .send({ email: 'new@veer.com', password: 'secret123' });
+      .send({ email: 'new@veer.com', password: 'secret123', firstName: 'New', lastName: 'User' });
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
     expect(res.body.email).toBe('new@veer.com');

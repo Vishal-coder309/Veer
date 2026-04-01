@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../prisma/client');
 const { protect } = require('../middleware/auth');
+const { sendMail, dailyProgressEmail } = require('../services/mailer');
 
 const toDateStr = (d) => new Date(d).toISOString().split('T')[0];
 
@@ -60,6 +61,41 @@ router.put('/:id/stop', protect, async (req, res) => {
     });
 
     await updateStreak(req.user.id, session.date);
+
+    const existingCommitment = await prisma.dailyCommitment.findUnique({
+      where: { userId_date: { userId: req.user.id, date: session.date } },
+    });
+    const totalStudyMinutes = (existingCommitment?.studyMinutes || 0) + durationMinutes;
+    await prisma.dailyCommitment.upsert({
+      where: { userId_date: { userId: req.user.id, date: session.date } },
+      update: { status: 'committed', studyMinutes: totalStudyMinutes },
+      create: { userId: req.user.id, date: session.date, status: 'committed', studyMinutes: totalStudyMinutes },
+    });
+
+    const completedToday = await prisma.session.findMany({
+      where: { userId: req.user.id, date: session.date, status: 'completed' },
+      orderBy: { startTime: 'desc' },
+    });
+    const subjectBreakdown = {};
+    completedToday.forEach((entry) => {
+      subjectBreakdown[entry.subject] = (subjectBreakdown[entry.subject] || 0) + (entry.durationMinutes || 0);
+    });
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    const dateLabel = new Date(`${session.date}T00:00:00`).toLocaleDateString('en-IN', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+    const { subject, html } = dailyProgressEmail(user.name || user.username || 'there', {
+      dateLabel,
+      totalMinutes: totalStudyMinutes,
+      sessionCount: completedToday.length,
+      streak: user.streakCurrent,
+      goalMinutes: user.dailyGoalMinutes,
+      subjectBreakdown,
+    });
+    sendMail(user.email, subject, html).catch((e) => console.warn('Daily progress email failed:', e.message));
 
     res.json({ success: true, session });
   } catch (err) {

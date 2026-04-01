@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
 function Steps({ current }) {
-  const labels = ['Email & Password', 'Verify OTP', 'Set Username & PIN'];
+  const labels = ['Name, Email & Password', 'Verify OTP', 'Set Username & PIN'];
   return (
     <div className="flex items-center gap-1 mb-8">
       {labels.map((label, i) => (
@@ -118,6 +118,8 @@ export default function Signup() {
   const [resendCooldown, setResendCooldown] = useState(0);
 
   // Step 0 fields
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -142,9 +144,10 @@ export default function Signup() {
   const handleRegister = async (e) => {
     e.preventDefault();
     if (password.length < 6) return toast.error('Password must be at least 6 characters');
+    if (!firstName.trim() || !lastName.trim()) return toast.error('First and last name are required');
     setLoading(true);
     try {
-      await api.post('/auth/register', { email, password });
+      await api.post('/auth/register', { email, password, firstName: firstName.trim(), lastName: lastName.trim() });
       toast.success(`OTP sent to ${email}`);
       setStep(1);
       setResendCooldown(30);
@@ -233,9 +236,33 @@ export default function Signup() {
         <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl p-7">
           <Steps current={step} />
 
-          {/* ── STEP 0: Email + Password ── */}
+          {/* ── STEP 0: Name + Email + Password ── */}
           {step === 0 && (
             <form onSubmit={handleRegister} className="space-y-4 animate-fade-in">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">First name</label>
+                  <input
+                    type="text"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    className="input"
+                    placeholder="First name"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="label">Last name</label>
+                  <input
+                    type="text"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    className="input"
+                    placeholder="Last name"
+                    required
+                  />
+                </div>
+              </div>
               <div>
                 <label className="label">Email address</label>
                 <input

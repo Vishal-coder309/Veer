@@ -121,6 +121,58 @@ const weeklyReportEmail = (name, stats) => ({
   `,
 });
 
+const dailyProgressEmail = (name, stats) => {
+  const breakdownRows = Object.entries(stats.subjectBreakdown || {})
+    .sort(([, a], [, b]) => b - a)
+    .map(([subject, minutes]) => `
+      <tr>
+        <td style="padding:8px 0;color:#475569;font-size:14px;">${subject}</td>
+        <td style="padding:8px 0;color:#1e293b;font-size:14px;font-weight:700;text-align:right;">${minutes}m</td>
+      </tr>
+    `)
+    .join('') || `
+      <tr>
+        <td colspan="2" style="padding:8px 0;color:#94a3b8;font-size:14px;">No session breakdown yet.</td>
+      </tr>
+    `;
+
+  return {
+    subject: `📈 Your VEER progress for ${stats.dateLabel}`,
+    html: `
+      <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;background:#f8fafc;border-radius:16px;overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#0f172a,#2563eb);padding:40px 32px;text-align:center;">
+          <div style="font-size:44px;margin-bottom:8px;">📈</div>
+          <h1 style="color:#fff;margin:0;font-size:22px;font-weight:800;">Daily progress saved</h1>
+          <p style="color:rgba(255,255,255,0.7);margin:6px 0 0;font-size:13px;">${stats.dateLabel}</p>
+        </div>
+        <div style="padding:32px;">
+          <p style="color:#1e293b;font-size:16px;">Nice work, <strong>${name.split(' ')[0]}</strong>. Here is today's summary:</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0;">
+            ${[
+              ['⏱️ Study Time', `${stats.totalMinutes}m`],
+              ['🧩 Sessions', `${stats.sessionCount}`],
+              ['🔥 Streak', `${stats.streak} days`],
+              ['🎯 Goal', `${stats.goalMinutes}m`],
+            ].map(([label, value]) => `
+              <div style="background:#fff;border-radius:12px;padding:16px;text-align:center;border:1px solid #e2e8f0;">
+                <p style="font-size:20px;margin:0 0 4px;">${label.split(' ')[0]}</p>
+                <p style="font-size:22px;font-weight:800;color:#1e293b;margin:0;">${value}</p>
+                <p style="font-size:12px;color:#94a3b8;margin:4px 0 0;">${label.split(' ').slice(1).join(' ')}</p>
+              </div>
+            `).join('')}
+          </div>
+          <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-top:20px;">
+            <p style="font-size:14px;font-weight:700;color:#1e293b;margin:0 0 12px;">Subject breakdown</p>
+            <table width="100%" cellspacing="0" cellpadding="0">${breakdownRows}</table>
+          </div>
+          <p style="color:#475569;line-height:1.7;margin-top:20px;">Keep the rhythm going. Small daily sessions add up fast.</p>
+          <p style="color:#94a3b8;font-size:13px;margin-top:32px;border-top:1px solid #e2e8f0;padding-top:20px;">VEER Study Tracker — Built for SSC CGL aspirants 🎯</p>
+        </div>
+      </div>
+    `,
+  };
+};
+
 // ─── OTP Verification Email ───────────────────────────────────────────────────
 
 const otpEmail = (email, otp) => ({
@@ -186,4 +238,5 @@ module.exports = {
   studyReminderEmail,
   weeklyReportEmail,
   motivationEmail,
+  dailyProgressEmail,
 };

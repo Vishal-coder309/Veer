@@ -14,10 +14,15 @@ jest.mock('../prisma/client', () => ({
     update: jest.fn(),
     aggregate: jest.fn(),
   },
+  dailyCommitment: {
+    findUnique: jest.fn(),
+    upsert: jest.fn(),
+  },
 }));
 
 jest.mock('../services/mailer', () => ({
   sendMail: jest.fn().mockResolvedValue({}),
+  dailyProgressEmail: jest.fn().mockReturnValue({ subject: 'Daily Progress', html: '<p>progress</p>' }),
 }));
 
 const prisma = require('../prisma/client');
@@ -94,11 +99,15 @@ describe('PUT /api/sessions/:id/stop', () => {
     const started = new Date(Date.now() - 30 * 60000); // 30 mins ago
     prisma.session.findFirst.mockResolvedValue(mockSession({ startTime: started }));
     prisma.session.update.mockResolvedValue(mockSession({ status: 'completed', durationMinutes: 30 }));
+    prisma.dailyCommitment.findUnique.mockResolvedValue({ studyMinutes: 10 });
+    prisma.dailyCommitment.upsert.mockResolvedValue({ studyMinutes: 40 });
+    prisma.session.findMany.mockResolvedValue([mockSession({ status: 'completed', durationMinutes: 30 })]);
     const res = await request(app)
       .put('/api/sessions/sess123/stop')
       .set(auth());
     expect(res.status).toBe(200);
     expect(res.body.session.status).toBe('completed');
+    expect(prisma.dailyCommitment.upsert).toHaveBeenCalled();
   });
 });
 

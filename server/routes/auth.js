@@ -18,21 +18,29 @@ router.post('/register',
   [
     body('email').isEmail().withMessage('Valid email required'),
     body('password').isLength({ min: 6 }).withMessage('Password min 6 chars'),
+    body('firstName').trim().isLength({ min: 1, max: 50 }).withMessage('First name required'),
+    body('lastName').trim().isLength({ min: 1, max: 50 }).withMessage('Last name required'),
   ],
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ success: false, errors: errors.array() });
 
-    const { email, password } = req.body;
+    const { email, password, firstName, lastName } = req.body;
     try {
       const existing = await prisma.user.findUnique({ where: { email } });
       if (existing?.emailVerified) {
         return res.status(400).json({ success: false, message: 'Email already registered' });
       }
 
+      const displayName = [firstName, lastName].filter(Boolean).join(' ').trim();
+      const usernameSeed = [firstName, lastName].filter(Boolean).join('_') || displayName || email;
+      const username = existing?.username || await buildUsername(usernameSeed);
+
       const otp = generateOTP();
       const data = {
         email,
+        name: displayName,
+        username,
         password: await hashPassword(password),
         otpCode: hashOtp(otp),
         otpExpiresAt: otpExpiresAt(),
@@ -48,7 +56,7 @@ router.post('/register',
 
       const { subject, html } = otpEmail(email, otp);
       await sendMail(email, subject, html);
-      res.status(201).json({ success: true, message: `OTP sent to ${email}`, email });
+      res.status(201).json({ success: true, message: `OTP sent to ${email}`, email, user: { email, name: displayName, username } });
     } catch (err) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -89,7 +97,7 @@ router.post('/verify-otp', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
     }
 
-    const suggestedUsername = await buildUsername(email);
+    const suggestedUsername = user.username || await buildUsername((user.name || email).replace(/\s+/g, '_'));
     const updated = await prisma.user.update({
       where: { email },
       data: {
@@ -97,7 +105,7 @@ router.post('/verify-otp', async (req, res) => {
         otpCode: null,
         otpExpiresAt: null,
         username: suggestedUsername,
-        name: suggestedUsername,
+        name: user.name || suggestedUsername,
       },
     });
 
@@ -128,7 +136,7 @@ router.post('/setup-profile', protect,
 
       const user = await prisma.user.update({
         where: { id: req.user.id },
-        data: { username: username.toLowerCase(), name: username.toLowerCase(), pin: await hashPin(pin), profileComplete: true },
+        data: { username: username.toLowerCase(), pin: await hashPin(pin), profileComplete: true },
       });
 
       const { subject, html } = welcomeEmail(user.username);
