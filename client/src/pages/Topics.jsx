@@ -2,10 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { topicsAPI } from '../utils/api';
 import toast from 'react-hot-toast';
 
-const SUBJECTS = ['Quantitative Aptitude', 'Reasoning', 'English', 'General Knowledge'];
+const SUBJECTS = ['Maths', 'Reasoning', 'English', 'General Knowledge'];
 
 const SUBJECT_META = {
-  'Quantitative Aptitude': { icon: '🔢', color: 'blue' },
+  Maths: { icon: '🔢', color: 'blue' },
   Reasoning: { icon: '🧠', color: 'purple' },
   English: { icon: '📖', color: 'green' },
   'General Knowledge': { icon: '🌍', color: 'orange' },
@@ -32,7 +32,7 @@ const STATUS_ICONS = {
 export default function Topics() {
   const [topics, setTopics] = useState({});
   const [summary, setSummary] = useState({});
-  const [activeSubject, setActiveSubject] = useState('Quantitative Aptitude');
+  const [activeSubject, setActiveSubject] = useState('Maths');
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all | not_started | in_progress | completed
   const [search, setSearch] = useState('');

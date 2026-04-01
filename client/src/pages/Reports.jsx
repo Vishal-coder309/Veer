@@ -13,14 +13,14 @@ ChartJS.register(
 );
 
 const SUBJECT_COLORS_CHART = {
-  'Quantitative Aptitude': '#3b82f6',
+  Maths: '#3b82f6',
   Reasoning: '#8b5cf6',
   English: '#10b981',
   'General Knowledge': '#f97316',
 };
 
 const SHORT = {
-  'Quantitative Aptitude': 'Quant',
+  Maths: 'Maths',
   Reasoning: 'Reasoning',
   English: 'English',
   'General Knowledge': 'GK',

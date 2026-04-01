@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { testsAPI } from '../utils/api';
 import toast from 'react-hot-toast';
 
-const SUBJECTS = ['Quantitative Aptitude', 'Reasoning', 'English', 'General Knowledge'];
+const SUBJECTS = ['Maths', 'Reasoning', 'English', 'General Knowledge'];
 
 const emptySubjectScore = (subject) => ({
   subject, attempted: '', correct: '', wrong: '', marks: '', totalMarks: '',

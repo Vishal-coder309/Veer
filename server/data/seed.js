@@ -7,7 +7,7 @@ const prisma = require('../prisma/client');
 const { hashPassword } = require('../utils/authHelpers');
 
 const toDateStr = (d) => new Date(d).toISOString().split('T')[0];
-const SUBJECTS = ['Quantitative Aptitude', 'Reasoning', 'English', 'General Knowledge'];
+const SUBJECTS = ['Maths', 'Reasoning', 'English', 'General Knowledge'];
 
 async function seed() {
   // Clean up existing demo user (cascade deletes sessions, tests, etc.)
@@ -63,10 +63,10 @@ async function seed() {
 
   // Create topic progress
   const topicEntries = [
-    { subject: 'Quantitative Aptitude', topicName: 'Number System', status: 'completed' },
-    { subject: 'Quantitative Aptitude', topicName: 'Percentage', status: 'completed' },
-    { subject: 'Quantitative Aptitude', topicName: 'Ratio & Proportion', status: 'in_progress' },
-    { subject: 'Quantitative Aptitude', topicName: 'Profit & Loss', status: 'in_progress' },
+    { subject: 'Maths', topicName: 'Number System', status: 'completed' },
+    { subject: 'Maths', topicName: 'Percentage', status: 'completed' },
+    { subject: 'Maths', topicName: 'Ratio', status: 'in_progress' },
+    { subject: 'Maths', topicName: 'Profit & Loss', status: 'in_progress' },
     { subject: 'Reasoning', topicName: 'Analogy', status: 'completed' },
     { subject: 'Reasoning', topicName: 'Series (Number)', status: 'completed' },
     { subject: 'Reasoning', topicName: 'Coding-Decoding', status: 'in_progress' },
@@ -92,7 +92,7 @@ async function seed() {
       score: 172.5, totalMarks: 200, accuracy: Math.round((60 / 85) * 100),
       timeTakenMinutes: 60,
       subjectScores: [
-        { subject: 'Quantitative Aptitude', attempted: 20, correct: 14, wrong: 6, marks: 40, totalMarks: 50 },
+        { subject: 'Maths', attempted: 20, correct: 14, wrong: 6, marks: 40, totalMarks: 50 },
         { subject: 'Reasoning', attempted: 22, correct: 17, wrong: 5, marks: 48, totalMarks: 50 },
         { subject: 'English', attempted: 22, correct: 15, wrong: 7, marks: 43, totalMarks: 50 },
         { subject: 'General Knowledge', attempted: 21, correct: 14, wrong: 7, marks: 41.5, totalMarks: 50 },
@@ -106,7 +106,7 @@ async function seed() {
       score: 190, totalMarks: 200, accuracy: Math.round((68 / 90) * 100),
       timeTakenMinutes: 60,
       subjectScores: [
-        { subject: 'Quantitative Aptitude', attempted: 23, correct: 16, wrong: 7, marks: 45, totalMarks: 50 },
+        { subject: 'Maths', attempted: 23, correct: 16, wrong: 7, marks: 45, totalMarks: 50 },
         { subject: 'Reasoning', attempted: 24, correct: 19, wrong: 5, marks: 52.5, totalMarks: 50 },
         { subject: 'English', attempted: 22, correct: 17, wrong: 5, marks: 47.5, totalMarks: 50 },
         { subject: 'General Knowledge', attempted: 21, correct: 16, wrong: 5, marks: 45, totalMarks: 50 },

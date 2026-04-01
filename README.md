@@ -238,9 +238,9 @@ After running `node data/seed.js`:
 
 ## SSC CGL Syllabus Coverage
 
-- **Quantitative Aptitude** — 30 topics
+- **Maths** — 40 topics
 - **Reasoning** — 30 topics
 - **English** — 27 topics
 - **General Knowledge** — 23 topics
 
-**Total: 110 topics** pre-loaded.
+**Total: 120 topics** pre-loaded.

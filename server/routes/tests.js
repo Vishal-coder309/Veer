@@ -92,7 +92,7 @@ router.get('/analytics', protect, async (req, res) => {
 
     if (tests.length === 0) return res.json({ success: true, analytics: null });
 
-    const SUBJECTS = ['Quantitative Aptitude', 'Reasoning', 'English', 'General Knowledge'];
+    const SUBJECTS = ['Maths', 'Reasoning', 'English', 'General Knowledge'];
     const subjectAccuracy = {};
 
     SUBJECTS.forEach((subj) => {

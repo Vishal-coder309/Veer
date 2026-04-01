@@ -13,14 +13,14 @@ import { Bar, Doughnut } from 'react-chartjs-2';
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
 
 const SUBJECT_COLORS = {
-  'Quantitative Aptitude': { bg: 'bg-zinc-800', light: 'bg-zinc-50 dark:bg-zinc-800/50', text: 'text-zinc-800 dark:text-zinc-300', chart: '#27272a' },
+  Maths:                   { bg: 'bg-zinc-800', light: 'bg-zinc-50 dark:bg-zinc-800/50', text: 'text-zinc-800 dark:text-zinc-300', chart: '#27272a' },
   Reasoning:               { bg: 'bg-zinc-600', light: 'bg-zinc-50 dark:bg-zinc-800/40', text: 'text-zinc-700 dark:text-zinc-400', chart: '#52525b' },
   English:                 { bg: 'bg-zinc-500', light: 'bg-zinc-50 dark:bg-zinc-800/40', text: 'text-zinc-700 dark:text-zinc-400', chart: '#71717a' },
   'General Knowledge':     { bg: 'bg-zinc-400', light: 'bg-zinc-50 dark:bg-zinc-900/20', text: 'text-zinc-600 dark:text-zinc-400', chart: '#a1a1aa' },
 };
 
 const SHORT_SUBJECT = {
-  'Quantitative Aptitude': 'Quant',
+  Maths: 'Maths',
   Reasoning: 'Reasoning',
   English: 'English',
   'General Knowledge': 'GK',

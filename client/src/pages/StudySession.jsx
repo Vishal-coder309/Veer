@@ -2,17 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import { sessionsAPI } from '../utils/api';
 import toast from 'react-hot-toast';
 
-const SUBJECTS = ['Quantitative Aptitude', 'Reasoning', 'English', 'General Knowledge'];
+const SUBJECTS = ['Maths', 'Reasoning', 'English', 'General Knowledge'];
 
 const SUBJECT_TOPICS = {
-  'Quantitative Aptitude': ['Number System', 'Simplification', 'Percentage', 'Profit & Loss', 'Ratio & Proportion', 'Time & Work', 'Time, Speed & Distance', 'Mensuration', 'Geometry', 'Trigonometry', 'Algebra', 'Data Interpretation', 'Average', 'Simple Interest', 'Compound Interest'],
+  Maths: ['SSC New Pattern Concepts', 'Calculation Videos', 'Percentage', 'Profit & Loss', 'Discount', 'Simple Interest', 'Compound Interest', 'Time & Work', 'Work & Wages', 'Pipe & Cistern', 'Time, Speed & Distance', 'Train', 'Race', 'Circular Motion', 'Boat & Stream', 'Ratio', 'Proportion', 'Ages', 'Partnership', 'Mixture', 'Alligation', 'Average', 'Simplification', 'Surds & Indices', 'Number System', 'Arithmetic and Geometric Progression (AP & GP)', 'HCF & LCM', 'Algebra', 'Quadratic Equation', 'Trigonometry', 'Maxima & Minima (Trigonometry)', 'Height & Distance', 'Geometry', 'Mensuration 2D', 'Mensuration 3D', 'Co-ordinate Geometry', 'Probability', 'Permutation & Combination', 'Data Interpretation (D.I)', 'Statistics'],
   Reasoning: ['Analogy', 'Classification', 'Series', 'Coding-Decoding', 'Direction & Distance', 'Blood Relations', 'Syllogism', 'Venn Diagrams', 'Puzzle', 'Seating Arrangement', 'Figure Counting', 'Paper Folding', 'Mirror Image', 'Dice', 'Matrix'],
   English: ['Reading Comprehension', 'Cloze Test', 'Fill in the Blanks', 'Error Detection', 'Synonyms', 'Antonyms', 'One Word Substitution', 'Idioms & Phrases', 'Active & Passive Voice', 'Direct & Indirect Speech', 'Sentence Improvement', 'Para Jumbles'],
   'General Knowledge': ['Indian History', 'Indian Polity', 'Indian Geography', 'World Geography', 'Indian Economy', 'General Science (Physics)', 'General Science (Chemistry)', 'General Science (Biology)', 'Current Affairs', 'Awards & Honours', 'Sports', 'Computer & Technology'],
 };
 
 const SUBJECT_COLORS = {
-  'Quantitative Aptitude': 'from-blue-500 to-blue-600',
+  Maths: 'from-blue-500 to-blue-600',
   Reasoning: 'from-purple-500 to-purple-600',
   English: 'from-green-500 to-green-600',
   'General Knowledge': 'from-orange-500 to-orange-600',
