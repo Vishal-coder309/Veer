@@ -12,14 +12,17 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle 401 globally
+// Handle 401 globally — but not during signup flow
 api.interceptors.response.use(
   (res) => res,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('veer_token');
-      localStorage.removeItem('veer_user');
-      window.location.href = '/login';
+      const onSignup = window.location.pathname === '/signup';
+      if (!onSignup) {
+        localStorage.removeItem('veer_token');
+        localStorage.removeItem('veer_user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

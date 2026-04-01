@@ -43,13 +43,10 @@ export const AuthProvider = ({ children }) => {
     return userData;
   }, []);
 
-  const register = useCallback(async (name, email, password) => {
-    const res = await authAPI.register({ name, email, password });
-    const { token, user: userData } = res.data;
-    localStorage.setItem('veer_token', token);
-    localStorage.setItem('veer_user', JSON.stringify(userData));
-    setUser(userData);
-    return userData;
+  const register = useCallback(async (email, password) => {
+    const res = await authAPI.register({ email, password });
+    // Step 1 of signup only sends OTP — no token/user returned yet
+    return res.data;
   }, []);
 
   const logout = useCallback(() => {

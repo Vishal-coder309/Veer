@@ -111,7 +111,7 @@ function PinInput({ label, value, onChange, placeholder = '● ● ● ●' }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function Signup() {
-  useAuth();
+  const { updateUser } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -204,9 +204,10 @@ export default function Signup() {
         { username: username.toLowerCase(), pin },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      // Store user in auth context manually
+      // Update auth context AND localStorage so the app recognizes the logged-in user
       const user = { ...res.data.user };
       localStorage.setItem('veer_user', JSON.stringify(user));
+      updateUser(user);
       toast.success('Account ready! Welcome to VEER 🎉');
       navigate('/dashboard');
     } catch (err) {
