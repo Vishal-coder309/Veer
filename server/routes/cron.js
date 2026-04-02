@@ -5,7 +5,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../prisma/client');
-const { sendMail, studyReminderEmail } = require('../services/mailer');
+const { sendMail, studyReminderEmail, motivationEmail } = require('../services/mailer');
 
 const toDateStr = (d) => new Date(d).toISOString().split('T')[0];
 
@@ -85,6 +85,43 @@ router.get('/daily-reminders', async (req, res) => {
         } catch (e) {
           errors.push({ user: user.email, error: e.message });
         }
+      }
+    }
+
+    res.json({ success: true, checked: users.length, sent, errors });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// GET /api/cron/daily-motivation
+// Schedule: "30 3 * * *" (3:30 AM UTC = 9:00 AM IST)
+router.get('/daily-motivation', async (req, res) => {
+  if (!verifyCronSecret(req)) return res.status(401).json({ error: 'Unauthorized' });
+
+  const istNow = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
+  const istDay = istNow.getUTCDay();
+
+  try {
+    const users = await prisma.user.findMany({
+      where: {
+        emailVerified: true,
+        notificationsEnabled: true,
+        reminderDays: { has: istDay },
+      },
+      select: { email: true, username: true, name: true },
+    });
+
+    let sent = 0;
+    const errors = [];
+
+    for (const user of users) {
+      try {
+        const { subject, html } = motivationEmail(user.name || user.username || 'there');
+        await sendMail(user.email, subject, html);
+        sent++;
+      } catch (e) {
+        errors.push({ user: user.email, error: e.message });
       }
     }
 
