@@ -62,7 +62,11 @@ export default function Login() {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <img src="/veer-logo.svg" alt="VEER" className="h-14 w-auto mx-auto mb-4" />
+          <img
+            src={theme === 'dark' ? '/veer-logo-dark.svg' : '/veer-logo.svg'}
+            alt="VEER"
+            className="h-20 w-auto mx-auto mb-4"
+          />
           <h1 className="text-3xl font-bold text-white">Welcome back</h1>
           <p className="text-slate-400 mt-1">Sign in to VEER</p>
         </div>

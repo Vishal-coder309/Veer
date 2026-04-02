@@ -6,6 +6,7 @@ const STATIC_ASSETS = [
   '/manifest.json',
   '/veer-icon.svg',
   '/veer-logo.svg',
+  '/veer-logo-dark.svg',
 ];
 
 // Install: cache static assets
