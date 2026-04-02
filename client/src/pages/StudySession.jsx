@@ -40,6 +40,19 @@ export default function StudySession() {
   const intervalRef = useRef(null);
   const startTimeRef = useRef(null);
 
+  const resolveActiveSessionId = async () => {
+    if (sessionId) return sessionId;
+    try {
+      const res = await sessionsAPI.getToday();
+      const active = (res.data.sessions || []).find((s) => s.status === 'active' || s.status === 'paused');
+      const recoveredId = active?.id || active?._id || null;
+      if (recoveredId) setSessionId(recoveredId);
+      return recoveredId;
+    } catch {
+      return null;
+    }
+  };
+
   useEffect(() => {
     loadToday();
     const handleVisibility = () => {
@@ -77,7 +90,9 @@ export default function StudySession() {
     setLoading(true);
     try {
       const res = await sessionsAPI.start({ subject, topic: finalTopic, notes });
-      setSessionId(res.data.session.id);
+      const newSessionId = res?.data?.session?.id || res?.data?.session?._id;
+      if (!newSessionId) throw new Error('Session ID missing from start response');
+      setSessionId(newSessionId);
       setStatus('active');
       setElapsed(0);
       toast.success(`Started: ${finalTopic}`);
@@ -89,42 +104,48 @@ export default function StudySession() {
   };
 
   const handlePause = async () => {
-    if (!sessionId) return;
+    const id = await resolveActiveSessionId();
+    if (!id) return toast.error('No active session found to pause');
     setStatus('paused'); // update UI immediately
     toast('Session paused', { icon: '⏸️' });
     try {
-      await sessionsAPI.pause(sessionId);
+      await sessionsAPI.pause(id);
     } catch (err) {
       console.error('Pause sync failed:', err?.response?.data || err.message);
+      setStatus('active');
+      toast.error('Could not pause session');
     }
   };
 
   const handleResume = async () => {
-    if (!sessionId) return;
+    const id = await resolveActiveSessionId();
+    if (!id) return toast.error('No paused session found to resume');
     setStatus('active'); // update UI immediately
     toast('Session resumed!', { icon: '▶️' });
     try {
-      await sessionsAPI.resume(sessionId);
+      await sessionsAPI.resume(id);
     } catch (err) {
       console.error('Resume sync failed:', err?.response?.data || err.message);
+      setStatus('paused');
+      toast.error('Could not resume session');
     }
   };
 
   const handleStop = async () => {
-    if (!sessionId) return;
+    const id = await resolveActiveSessionId();
+    if (!id) return toast.error('No active session found to stop');
     setLoading(true);
     const elapsedAtStop = elapsed;
-    // Reset UI immediately so user isn't stuck
-    setStatus('idle');
-    setSessionId(null);
-    setElapsed(0);
-    setSubject('');
-    setTopic('');
-    setCustomTopic('');
-    setNotes('');
     try {
-      const res = await sessionsAPI.stop(sessionId, { elapsedSeconds: elapsedAtStop });
+      const res = await sessionsAPI.stop(id, { elapsedSeconds: elapsedAtStop });
       const duration = res.data.session.durationMinutes;
+      setStatus('idle');
+      setSessionId(null);
+      setElapsed(0);
+      setSubject('');
+      setTopic('');
+      setCustomTopic('');
+      setNotes('');
       toast.success(`Session saved! ${duration} minutes logged 🎉`);
       await loadToday();
     } catch (err) {
@@ -178,11 +199,11 @@ export default function StudySession() {
           ) : (
             <>
               {status === 'active' ? (
-                <button onClick={handlePause} className="btn-secondary flex items-center gap-2">
+                <button onClick={handlePause} disabled={loading} className="btn-secondary flex items-center gap-2">
                   <span>⏸</span> Pause
                 </button>
               ) : (
-                <button onClick={handleResume} className="btn-secondary flex items-center gap-2">
+                <button onClick={handleResume} disabled={loading} className="btn-secondary flex items-center gap-2">
                   <span>▶</span> Resume
                 </button>
               )}
