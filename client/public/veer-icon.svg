@@ -1,0 +1,17 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">VEER App Icon</title>
+  <desc id="desc">VEER shield icon with stylized V</desc>
+  <defs>
+    <linearGradient id="bg" x1="90" y1="70" x2="420" y2="450" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0EA5E9"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+    <linearGradient id="fg" x1="150" y1="140" x2="360" y2="360" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E2E8F0"/>
+    </linearGradient>
+  </defs>
+  <rect x="24" y="24" width="464" height="464" rx="96" fill="#0F172A"/>
+  <path d="M256 72L380 122V216C380 298 330 368 256 402C182 368 132 298 132 216V122L256 72Z" fill="url(#bg)"/>
+  <path d="M204 156L256 290L308 156H342L274 338H238L170 156H204Z" fill="url(#fg)"/>
+</svg>

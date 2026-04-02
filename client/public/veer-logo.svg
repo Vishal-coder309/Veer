@@ -1,0 +1,25 @@
+<svg width="512" height="160" viewBox="0 0 512 160" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">VEER Logo</title>
+  <desc id="desc">VEER brand logo with shield icon and wordmark</desc>
+
+  <defs>
+    <linearGradient id="shieldGrad" x1="24" y1="20" x2="136" y2="140" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0EA5E9"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+    <linearGradient id="sparkGrad" x1="48" y1="36" x2="120" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E2E8F0"/>
+    </linearGradient>
+  </defs>
+
+  <g>
+    <path d="M80 12L134 34V74C134 109 112 130 80 144C48 130 26 109 26 74V34L80 12Z" fill="url(#shieldGrad)"/>
+    <path d="M57 46L80 104L103 46H118L88 122H72L42 46H57Z" fill="url(#sparkGrad)"/>
+  </g>
+
+  <g>
+    <text x="164" y="94" fill="#0F172A" font-size="68" font-weight="800" letter-spacing="2" font-family="Segoe UI, Arial, sans-serif">VEER</text>
+    <text x="167" y="120" fill="#475569" font-size="18" font-weight="600" letter-spacing="3" font-family="Segoe UI, Arial, sans-serif">SSC CGL TRACKER</text>
+  </g>
+</svg>

@@ -1,9 +1,11 @@
-const CACHE_NAME = 'veer-cache-v1';
+const CACHE_NAME = 'veer-cache-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/static/js/bundle.js',
   '/manifest.json',
+  '/veer-icon.svg',
+  '/veer-logo.svg',
 ];
 
 // Install: cache static assets

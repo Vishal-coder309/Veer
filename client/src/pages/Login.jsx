@@ -62,9 +62,7 @@ export default function Login() {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex w-16 h-16 rounded-2xl bg-gradient-to-br from-zinc-500 to-zinc-600 items-center justify-center mb-4 shadow-2xl">
-            <span className="text-white font-bold text-3xl">V</span>
-          </div>
+          <img src="/veer-logo.svg" alt="VEER" className="h-14 w-auto mx-auto mb-4" />
           <h1 className="text-3xl font-bold text-white">Welcome back</h1>
           <p className="text-slate-400 mt-1">Sign in to VEER</p>
         </div>

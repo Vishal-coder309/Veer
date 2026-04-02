@@ -33,9 +33,7 @@ export default function Sidebar({ open, onClose }) {
     >
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-100 dark:border-zinc-800">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-zinc-500 to-zinc-600 flex items-center justify-center">
-          <span className="text-white font-bold text-lg">V</span>
-        </div>
+        <img src="/veer-logo.svg" alt="VEER" className="h-9 w-auto" />
         <div>
           <h1 className="font-bold text-xl text-gray-900 dark:text-white leading-none">VEER</h1>
           <p className="text-xs text-gray-400 mt-0.5">SSC CGL Tracker</p>
