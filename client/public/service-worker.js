@@ -29,21 +29,39 @@ self.addEventListener('activate', (event) => {
 
 // Fetch: network-first for API, cache-first for assets
 self.addEventListener('fetch', (event) => {
-  if (event.request.url.includes('/api/')) {
+  const request = event.request;
+
+  // Always prefer fresh HTML/navigation to avoid stale UI on normal refresh.
+  if (request.mode === 'navigate' || request.destination === 'document') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  if (request.url.includes('/api/')) {
     // Network first for API calls
     event.respondWith(
-      fetch(event.request).catch(() =>
-        caches.match(event.request)
+      fetch(request).catch(() =>
+        caches.match(request)
       )
     );
   } else {
     // Cache first for static assets
     event.respondWith(
-      caches.match(event.request).then(
-        (cached) => cached || fetch(event.request).then((response) => {
+      caches.match(request).then(
+        (cached) => cached || fetch(request).then((response) => {
           if (response.status === 200) {
             const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           }
           return response;
         })
