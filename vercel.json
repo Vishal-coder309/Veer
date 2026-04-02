@@ -13,6 +13,10 @@
   ],
   "crons": [
     {
+      "path": "/api/cron/daily-analytics",
+      "schedule": "30 17 * * *"
+    },
+    {
       "path": "/api/cron/daily-motivation",
       "schedule": "30 3 * * *"
     },

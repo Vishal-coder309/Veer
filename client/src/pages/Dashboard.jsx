@@ -13,10 +13,10 @@ import { Bar, Doughnut } from 'react-chartjs-2';
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
 
 const SUBJECT_COLORS = {
-  Maths:                   { bg: 'bg-zinc-800', light: 'bg-zinc-50 dark:bg-zinc-800/50', text: 'text-zinc-800 dark:text-zinc-300', chart: '#27272a' },
-  Reasoning:               { bg: 'bg-zinc-600', light: 'bg-zinc-50 dark:bg-zinc-800/40', text: 'text-zinc-700 dark:text-zinc-400', chart: '#52525b' },
-  English:                 { bg: 'bg-zinc-500', light: 'bg-zinc-50 dark:bg-zinc-800/40', text: 'text-zinc-700 dark:text-zinc-400', chart: '#71717a' },
-  'General Knowledge':     { bg: 'bg-zinc-400', light: 'bg-zinc-50 dark:bg-zinc-900/20', text: 'text-zinc-600 dark:text-zinc-400', chart: '#a1a1aa' },
+  Maths:                   { bg: 'bg-blue-500', light: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-700 dark:text-blue-300', chart: '#3b82f6' },
+  Reasoning:               { bg: 'bg-violet-500', light: 'bg-violet-50 dark:bg-violet-900/20', text: 'text-violet-700 dark:text-violet-300', chart: '#8b5cf6' },
+  English:                 { bg: 'bg-emerald-500', light: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-300', chart: '#10b981' },
+  'General Knowledge':     { bg: 'bg-amber-500', light: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-700 dark:text-amber-300', chart: '#f59e0b' },
 };
 
 const SHORT_SUBJECT = {
@@ -90,15 +90,17 @@ export default function Dashboard() {
     return d.toLocaleDateString('en-IN', { weekday: 'short' });
   }) || [];
 
+  const orderedSubjects = Object.keys(SUBJECT_COLORS);
   const weekData = {
     labels: weekLabels,
-    datasets: [{
-      label: 'Minutes Studied',
-      data: data?.weekStats?.map((s) => s.minutes) || [],
-      backgroundColor: '#52525b',
-      borderRadius: 8,
+    datasets: orderedSubjects.map((subject) => ({
+      label: SHORT_SUBJECT[subject] || subject,
+      data: data?.weekStats?.map((s) => s.subjectBreakdown?.[subject] || 0) || [],
+      backgroundColor: SUBJECT_COLORS[subject].chart,
+      borderRadius: 6,
       borderSkipped: false,
-    }],
+      stack: 'weekly',
+    })),
   };
 
   // Subject doughnut
@@ -107,7 +109,7 @@ export default function Dashboard() {
     labels: subjectKeys.map((s) => SHORT_SUBJECT[s] || s),
     datasets: [{
       data: subjectKeys.map((s) => data.subjectBreakdown[s]),
-      backgroundColor: ['#27272a', '#52525b', '#71717a', '#a1a1aa'],
+      backgroundColor: subjectKeys.map((s) => SUBJECT_COLORS[s]?.chart || '#6b7280'),
       borderWidth: 0,
       hoverOffset: 4,
     }],
@@ -116,10 +118,10 @@ export default function Dashboard() {
   const chartOpts = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
+    plugins: { legend: { display: true, labels: { boxWidth: 10, color: '#9ca3af', font: { size: 11 } } } },
     scales: {
-      x: { grid: { display: false }, ticks: { color: '#9ca3af', font: { size: 11 } } },
-      y: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#9ca3af', font: { size: 11 } } },
+      x: { stacked: true, grid: { display: false }, ticks: { color: '#9ca3af', font: { size: 11 } } },
+      y: { stacked: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#9ca3af', font: { size: 11 } } },
     },
   };
 

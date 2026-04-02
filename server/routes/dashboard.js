@@ -28,20 +28,40 @@ router.get('/', protect, async (req, res) => {
     });
 
     const todaySessions = weekSessions.filter((s) => s.date === today);
-    const todayMinutes = todaySessions.reduce((s, sess) => s + (sess.durationMinutes || 0), 0);
+    const timerTodayMinutes = todaySessions.reduce((s, sess) => s + (sess.durationMinutes || 0), 0);
+
+    // Use daily commitment total when available so dashboard includes manually logged time,
+    // while still protecting against stale/partial values.
+    const todayCommitment = await prisma.dailyCommitment.findUnique({
+      where: { userId_date: { userId: req.user.id, date: today } },
+      select: { studyMinutes: true },
+    });
+    const loggedTodayMinutes = Number(todayCommitment?.studyMinutes || 0);
+    const todayMinutes = Math.max(timerTodayMinutes, loggedTodayMinutes);
 
     const subjectBreakdown = {};
     todaySessions.forEach((sess) => {
       subjectBreakdown[sess.subject] = (subjectBreakdown[sess.subject] || 0) + (sess.durationMinutes || 0);
     });
 
-    // Weekly stats
-    const weekStats = dates.map((dateStr) => ({
-      date: dateStr,
-      minutes: weekSessions
-        .filter((s) => s.date === dateStr)
-        .reduce((s, sess) => s + (sess.durationMinutes || 0), 0),
-    }));
+    // Weekly stats with subject breakdown for colored bars by subject
+    const weekStats = dates.map((dateStr) => {
+      const daySessions = weekSessions.filter((s) => s.date === dateStr);
+      const daySubjectBreakdown = {};
+      let minutes = 0;
+
+      daySessions.forEach((sess) => {
+        const mins = sess.durationMinutes || 0;
+        minutes += mins;
+        daySubjectBreakdown[sess.subject] = (daySubjectBreakdown[sess.subject] || 0) + mins;
+      });
+
+      return {
+        date: dateStr,
+        minutes,
+        subjectBreakdown: daySubjectBreakdown,
+      };
+    });
 
     // Topic progress
     const progress = await prisma.topicProgress.findMany({ where: { userId: req.user.id } });
