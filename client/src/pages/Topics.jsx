@@ -93,6 +93,68 @@ export default function Topics() {
     }
   };
 
+  const updateCounts = async (subject, topic, field, value) => {
+    const reqMax = field === 'videosWatched' ? (topic.videosRequired || 0) : (topic.assignmentsRequired || 0);
+    const safeValue = Math.max(0, Math.min(Number(value) || 0, reqMax || Number(value) || 0));
+
+    setSaving(`${subject}::${topic.topicName}`);
+    try {
+      const payload = {
+        subject,
+        topicName: topic.topicName,
+        [field]: safeValue,
+      };
+      await topicsAPI.update(payload);
+
+      setTopics((prev) => {
+        const updated = { ...prev };
+        updated[subject] = updated[subject].map((t) => {
+          if (t.topicName !== topic.topicName) return t;
+          const next = { ...t, [field]: safeValue };
+          if (subject === 'Maths') {
+            const vReq = next.videosRequired || 0;
+            const aReq = next.assignmentsRequired || 0;
+            if ((next.videosWatched || 0) >= vReq && (next.assignmentsCompleted || 0) >= aReq) next.status = 'completed';
+            else if ((next.videosWatched || 0) > 0 || (next.assignmentsCompleted || 0) > 0) next.status = 'in_progress';
+            else next.status = 'not_started';
+          }
+          return next;
+        });
+        return updated;
+      });
+
+      const updatedTopics = (topics[subject] || []).map((t) =>
+        t.topicName === topic.topicName ? { ...t, [field]: safeValue } : t
+      );
+      const completed = updatedTopics.filter((t) =>
+        subject === 'Maths'
+          ? (t.videosWatched || 0) >= (t.videosRequired || 0) && (t.assignmentsCompleted || 0) >= (t.assignmentsRequired || 0)
+          : t.status === 'completed'
+      ).length;
+      const inProgress = updatedTopics.filter((t) =>
+        subject === 'Maths'
+          ? !((t.videosWatched || 0) >= (t.videosRequired || 0) && (t.assignmentsCompleted || 0) >= (t.assignmentsRequired || 0))
+            && ((t.videosWatched || 0) > 0 || (t.assignmentsCompleted || 0) > 0)
+          : t.status === 'in_progress'
+      ).length;
+
+      setSummary((prev) => ({
+        ...prev,
+        [subject]: {
+          ...prev[subject],
+          completed,
+          inProgress,
+          notStarted: (prev[subject]?.total || updatedTopics.length) - completed - inProgress,
+          percentage: Math.round((completed / (prev[subject]?.total || updatedTopics.length || 1)) * 100),
+        },
+      }));
+    } catch {
+      toast.error('Failed to update progress');
+    } finally {
+      setSaving(null);
+    }
+  };
+
   const filtered = (topics[activeSubject] || []).filter((t) => {
     const matchFilter = filter === 'all' || t.status === filter;
     const matchSearch = !search || t.topicName.toLowerCase().includes(search.toLowerCase());
@@ -194,42 +256,126 @@ export default function Topics() {
             filtered.map((t) => (
               <div
                 key={t.topicName}
-                className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
+                className="p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
               >
-                <div className="flex items-center gap-3">
-                  <span className={`text-lg ${
-                    t.status === 'completed' ? 'text-green-500' :
-                    t.status === 'in_progress' ? 'text-yellow-500' : 'text-gray-300 dark:text-gray-600'
-                  }`}>
-                    {STATUS_ICONS[t.status]}
-                  </span>
-                  <span className={`text-sm font-medium ${
-                    t.status === 'completed'
-                      ? 'line-through text-gray-400 dark:text-gray-500'
-                      : 'text-gray-900 dark:text-white'
-                  }`}>
-                    {t.topicName}
-                  </span>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <span className={`text-lg ${
+                      t.status === 'completed' ? 'text-green-500' :
+                      t.status === 'in_progress' ? 'text-yellow-500' : 'text-gray-300 dark:text-gray-600'
+                    }`}>
+                      {STATUS_ICONS[t.status]}
+                    </span>
+                    <span className={`text-sm font-medium ${
+                      t.status === 'completed'
+                        ? 'line-through text-gray-400 dark:text-gray-500'
+                        : 'text-gray-900 dark:text-white'
+                    }`}>
+                      {t.topicName}
+                    </span>
+                  </div>
+
+                  {/* Status cycle buttons */}
+                  <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {['not_started', 'in_progress', 'completed'].map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => updateStatus(activeSubject, t.topicName, s)}
+                        disabled={saving === `${activeSubject}::${t.topicName}`}
+                        className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
+                          t.status === s
+                            ? STATUS_STYLES[s] + ' opacity-100'
+                            : 'bg-gray-100 dark:bg-zinc-700 text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }`}
+                        title={STATUS_LABELS[s]}
+                      >
+                        {s === 'not_started' ? 'Not Started' : s === 'in_progress' ? 'In Progress' : '✓ Done'}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                {/* Status cycle buttons */}
-                <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {['not_started', 'in_progress', 'completed'].map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => updateStatus(activeSubject, t.topicName, s)}
-                      disabled={saving === `${activeSubject}::${t.topicName}`}
-                      className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
-                        t.status === s
-                          ? STATUS_STYLES[s] + ' opacity-100'
-                          : 'bg-gray-100 dark:bg-zinc-700 text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                      title={STATUS_LABELS[s]}
-                    >
-                      {s === 'not_started' ? 'Not Started' : s === 'in_progress' ? 'In Progress' : '✓ Done'}
-                    </button>
-                  ))}
-                </div>
+                {activeSubject === 'Maths' && (t.videosRequired > 0 || t.assignmentsRequired > 0) && (
+                  <div className="mt-3 pl-8 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="rounded-lg border border-gray-200 dark:border-zinc-700 p-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-semibold text-gray-700 dark:text-zinc-300">Videos</p>
+                        <label className="text-xs text-gray-500 dark:text-zinc-400 inline-flex items-center gap-1">
+                          <input
+                            type="checkbox"
+                            checked={(t.videosWatched || 0) >= (t.videosRequired || 0) && (t.videosRequired || 0) > 0}
+                            onChange={(e) => updateCounts(activeSubject, t, 'videosWatched', e.target.checked ? t.videosRequired : 0)}
+                          />
+                          done
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className="px-2 py-1 rounded bg-gray-100 dark:bg-zinc-800 text-xs"
+                          onClick={() => updateCounts(activeSubject, t, 'videosWatched', (t.videosWatched || 0) - 1)}
+                        >
+                          -
+                        </button>
+                        <input
+                          type="number"
+                          min={0}
+                          max={t.videosRequired || 0}
+                          value={t.videosWatched || 0}
+                          onChange={(e) => updateCounts(activeSubject, t, 'videosWatched', e.target.value)}
+                          className="input w-20 text-center h-8 py-1"
+                        />
+                        <button
+                          type="button"
+                          className="px-2 py-1 rounded bg-gray-100 dark:bg-zinc-800 text-xs"
+                          onClick={() => updateCounts(activeSubject, t, 'videosWatched', (t.videosWatched || 0) + 1)}
+                        >
+                          +
+                        </button>
+                        <span className="text-xs text-gray-500 dark:text-zinc-400">/ {t.videosRequired}</span>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border border-gray-200 dark:border-zinc-700 p-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-semibold text-gray-700 dark:text-zinc-300">Assignments</p>
+                        <label className="text-xs text-gray-500 dark:text-zinc-400 inline-flex items-center gap-1">
+                          <input
+                            type="checkbox"
+                            checked={(t.assignmentsCompleted || 0) >= (t.assignmentsRequired || 0) && (t.assignmentsRequired || 0) > 0}
+                            onChange={(e) => updateCounts(activeSubject, t, 'assignmentsCompleted', e.target.checked ? t.assignmentsRequired : 0)}
+                          />
+                          done
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className="px-2 py-1 rounded bg-gray-100 dark:bg-zinc-800 text-xs"
+                          onClick={() => updateCounts(activeSubject, t, 'assignmentsCompleted', (t.assignmentsCompleted || 0) - 1)}
+                        >
+                          -
+                        </button>
+                        <input
+                          type="number"
+                          min={0}
+                          max={t.assignmentsRequired || 0}
+                          value={t.assignmentsCompleted || 0}
+                          onChange={(e) => updateCounts(activeSubject, t, 'assignmentsCompleted', e.target.value)}
+                          className="input w-20 text-center h-8 py-1"
+                        />
+                        <button
+                          type="button"
+                          className="px-2 py-1 rounded bg-gray-100 dark:bg-zinc-800 text-xs"
+                          onClick={() => updateCounts(activeSubject, t, 'assignmentsCompleted', (t.assignmentsCompleted || 0) + 1)}
+                        >
+                          +
+                        </button>
+                        <span className="text-xs text-gray-500 dark:text-zinc-400">/ {t.assignmentsRequired}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Show badge on mobile (no hover) */}
                 <span className={`sm:hidden text-xs ${STATUS_STYLES[t.status]} badge`}>

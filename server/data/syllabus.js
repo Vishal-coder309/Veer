@@ -129,4 +129,62 @@ const SSC_CGL_SYLLABUS = {
   ],
 };
 
-module.exports = { SSC_CGL_SYLLABUS };
+const MATHS_TOPIC_REQUIREMENTS = {
+  'SSC New Pattern Concepts': { videos: 2, assignments: 3 },
+  'Calculation Videos': { videos: 8, assignments: 7 },
+  Percentage: { videos: 17, assignments: 3 },
+  'Profit & Loss': { videos: 14, assignments: 3 },
+  Discount: { videos: 9, assignments: 3 },
+  'Simple Interest': { videos: 17, assignments: 6 },
+  'Compound Interest': { videos: 16, assignments: 6 },
+  'Time & Work': { videos: 14, assignments: 3 },
+  'Work & Wages': { videos: 2, assignments: 3 },
+  'Pipe & Cistern': { videos: 5, assignments: 3 },
+  'Time, Speed & Distance': { videos: 15, assignments: 3 },
+  Train: { videos: 6, assignments: 3 },
+  Race: { videos: 3, assignments: 3 },
+  'Circular Motion': { videos: 1, assignments: 3 },
+  'Boat & Stream': { videos: 6, assignments: 3 },
+  Ratio: { videos: 12, assignments: 3 },
+  Proportion: { videos: 3, assignments: 3 },
+  Ages: { videos: 3, assignments: 3 },
+  Partnership: { videos: 7, assignments: 3 },
+  Mixture: { videos: 8, assignments: 3 },
+  Alligation: { videos: 5, assignments: 3 },
+  Average: { videos: 15, assignments: 3 },
+  Simplification: { videos: 10, assignments: 3 },
+  'Surds & Indices': { videos: 9, assignments: 3 },
+  'Number System': { videos: 24, assignments: 13 },
+  'Arithmetic and Geometric Progression (AP & GP)': { videos: 4, assignments: 5 },
+  'HCF & LCM': { videos: 8, assignments: 3 },
+  Algebra: { videos: 20, assignments: 7 },
+  'Quadratic Equation': { videos: 2, assignments: 3 },
+  Trigonometry: { videos: 23, assignments: 11 },
+  'Maxima & Minima (Trigonometry)': { videos: 2, assignments: 3 },
+  'Height & Distance': { videos: 5, assignments: 3 },
+  Geometry: { videos: 47, assignments: 20 },
+  'Mensuration 2D': { videos: 14, assignments: 3 },
+  'Mensuration 3D': { videos: 21, assignments: 3 },
+  'Co-ordinate Geometry': { videos: 7, assignments: 3 },
+  Probability: { videos: 9, assignments: 3 },
+  'Permutation & Combination': { videos: 5, assignments: 2 },
+  'Data Interpretation (D.I)': { videos: 16, assignments: 11 },
+  Statistics: { videos: 5, assignments: 3 },
+};
+
+function getTopicRequirements(subject, topicName) {
+  if (subject === 'Maths') {
+    return MATHS_TOPIC_REQUIREMENTS[topicName] || { videos: 0, assignments: 0 };
+  }
+  return { videos: 0, assignments: 0 };
+}
+
+function isTopicCompleted(topic) {
+  const req = getTopicRequirements(topic.subject, topic.topicName);
+  if (topic.subject === 'Maths' && (req.videos > 0 || req.assignments > 0)) {
+    return (topic.videosWatched || 0) >= req.videos && (topic.assignmentsCompleted || 0) >= req.assignments;
+  }
+  return topic.status === 'completed';
+}
+
+module.exports = { SSC_CGL_SYLLABUS, MATHS_TOPIC_REQUIREMENTS, getTopicRequirements, isTopicCompleted };

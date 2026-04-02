@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../prisma/client');
 const { protect } = require('../middleware/auth');
-const { SSC_CGL_SYLLABUS } = require('../data/syllabus');
+const { SSC_CGL_SYLLABUS, isTopicCompleted } = require('../data/syllabus');
 
 const toDateStr = (d) => new Date(d).toISOString().split('T')[0];
 
@@ -65,9 +65,22 @@ router.get('/', protect, async (req, res) => {
 
     // Topic progress
     const progress = await prisma.topicProgress.findMany({ where: { userId: req.user.id } });
+    const progressMap = {};
+    progress.forEach((p) => {
+      progressMap[`${p.subject}::${p.topicName}`] = p;
+    });
     const totalTopics = Object.values(SSC_CGL_SYLLABUS).flat().length;
-    const completedTopics = progress.filter((p) => p.status === 'completed').length;
-    const inProgressTopics = progress.filter((p) => p.status === 'in_progress').length;
+    let completedTopics = 0;
+    let inProgressTopics = 0;
+
+    Object.entries(SSC_CGL_SYLLABUS).forEach(([subject, topics]) => {
+      topics.forEach((topicName) => {
+        const p = progressMap[`${subject}::${topicName}`];
+        if (!p) return;
+        if (isTopicCompleted({ ...p, subject, topicName })) completedTopics++;
+        else if (p.status === 'in_progress' || (p.videosWatched || 0) > 0 || (p.assignmentsCompleted || 0) > 0) inProgressTopics++;
+      });
+    });
 
     // Recent tests
     const recentTests = await prisma.test.findMany({
