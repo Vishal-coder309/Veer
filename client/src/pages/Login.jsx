@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 
 export default function Login() {
-  useAuth();
   const { theme, toggleTheme } = useTheme();
 
   const [email, setEmail] = useState('');

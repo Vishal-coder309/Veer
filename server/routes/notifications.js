@@ -6,6 +6,14 @@ const { sendMail, studyReminderEmail, weeklyReportEmail } = require('../services
 
 const toDateStr = (d) => new Date(d).toISOString().split('T')[0];
 
+function getWeekStart(dateObj = new Date()) {
+  const d = new Date(dateObj);
+  const day = d.getUTCDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setUTCDate(d.getUTCDate() + diff);
+  return d.toISOString().split('T')[0];
+}
+
 // POST /api/notifications/test — send a test email to yourself
 router.post('/test', protect, async (req, res) => {
   try {
@@ -50,13 +58,13 @@ router.post('/reminder', protect, async (req, res) => {
 router.post('/weekly-report', protect, async (req, res) => {
   try {
     const now = new Date();
-    const weekStart = new Date(now);
-    weekStart.setDate(weekStart.getDate() - 6);
+    const today = toDateStr(now);
+    const weekStart = getWeekStart(now);
 
     const agg = await prisma.session.aggregate({
       where: {
         userId: req.user.id,
-        date: { gte: toDateStr(weekStart), lte: toDateStr(now) },
+        date: { gte: weekStart, lte: today },
         status: 'completed',
       },
       _sum: { durationMinutes: true },
@@ -77,7 +85,7 @@ router.post('/weekly-report', protect, async (req, res) => {
       sessions: sessionCount,
       streak: user.streakCurrent,
       topicsCompleted: completed,
-      weekLabel: `${weekStart.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} – ${now.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`,
+      weekLabel: `${new Date(weekStart).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} – ${new Date(today).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`,
     };
 
     const { subject, html } = weeklyReportEmail(user.name || user.username || 'there', stats);
