@@ -25,7 +25,7 @@ export default function JustificationModal({ data, onClose }) {
     }
     setSubmitting(true);
     try {
-      await api.post('/justification', { reason: reason.trim(), category });
+      await api.post('/justification', { reason: reason.trim(), category, weekStart });
       toast.success('Justification submitted ✅');
       onClose();
     } catch (err) {

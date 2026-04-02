@@ -12,15 +12,30 @@ function getWeekStart(dateObj = new Date()) {
   return d.toISOString().split('T')[0];
 }
 
-/** Count distinct days with completed sessions in [weekStart, today] */
-async function studyDaysThisWeek(userId) {
-  const weekStart = getWeekStart();
-  const today = new Date().toISOString().split('T')[0];
+function addDays(dateStr, days) {
+  const d = new Date(`${dateStr}T00:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().split('T')[0];
+}
+
+function getTargetWeekStart(dateObj = new Date()) {
+  const now = new Date(dateObj);
+  const rawDay = now.getUTCDay();
+  const dayOfWeek = rawDay === 0 ? 7 : rawDay; // Mon=1 ... Sun=7
+  const currentWeekStart = getWeekStart(now);
+
+  if (dayOfWeek === 7) return currentWeekStart; // Sunday: current week
+  if (dayOfWeek === 1) return addDays(currentWeekStart, -7); // Monday: previous week
+  return null;
+}
+
+/** Count distinct days with completed sessions in [startDate, endDate] */
+async function countStudyDays(userId, startDate, endDate) {
 
   const sessions = await prisma.session.findMany({
     where: {
       userId,
-      date: { gte: weekStart, lte: today },
+      date: { gte: startDate, lte: endDate },
       status: 'completed',
     },
     select: { date: true },
@@ -32,15 +47,19 @@ async function studyDaysThisWeek(userId) {
 // GET /api/justification/check — should a justification modal be shown?
 router.get('/check', protect, async (req, res) => {
   try {
-    const weekStart = getWeekStart();
     const rawDay = new Date().getUTCDay();
     const dayOfWeek = rawDay === 0 ? 7 : rawDay; // Mon=1 … Sun=7
+    const weekStart = getTargetWeekStart();
 
-    if (dayOfWeek < 4) {
-      return res.json({ required: false, reason: 'Too early in the week' });
+    if (!weekStart) {
+      return res.json({ required: false, reason: 'Justification opens on Sunday or Monday only' });
     }
 
-    const daysStudied = await studyDaysThisWeek(req.user.id);
+    const weekEnd = addDays(weekStart, 6);
+    const today = new Date().toISOString().split('T')[0];
+    const evaluationEnd = today < weekEnd ? today : weekEnd;
+
+    const daysStudied = await countStudyDays(req.user.id, weekStart, evaluationEnd);
     if (daysStudied >= 3) {
       return res.json({ required: false, daysStudied });
     }
@@ -52,7 +71,7 @@ router.get('/check', protect, async (req, res) => {
       return res.json({ required: false, alreadySubmitted: true, daysStudied });
     }
 
-    res.json({ required: true, weekStart, daysStudied, threshold: 3, dayOfWeek });
+    res.json({ required: true, weekStart, weekEnd, daysStudied, threshold: 3, dayOfWeek });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -61,7 +80,7 @@ router.get('/check', protect, async (req, res) => {
 // POST /api/justification — submit a justification
 router.post('/', protect, async (req, res) => {
   try {
-    const { reason, category } = req.body;
+    const { reason, category, weekStart: providedWeekStart } = req.body;
     if (!reason || reason.trim().length < 20) {
       return res.status(400).json({
         success: false,
@@ -69,8 +88,27 @@ router.post('/', protect, async (req, res) => {
       });
     }
 
-    const weekStart = getWeekStart();
-    const daysStudied = await studyDaysThisWeek(req.user.id);
+    const computedWeekStart = getTargetWeekStart();
+    if (!computedWeekStart) {
+      return res.status(400).json({
+        success: false,
+        message: 'Justification can be submitted on Sunday or Monday only',
+      });
+    }
+
+    if (providedWeekStart && providedWeekStart !== computedWeekStart) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid week selected for justification',
+      });
+    }
+
+    const weekStart = computedWeekStart;
+
+    const weekEnd = addDays(weekStart, 6);
+    const today = new Date().toISOString().split('T')[0];
+    const evaluationEnd = today < weekEnd ? today : weekEnd;
+    const daysStudied = await countStudyDays(req.user.id, weekStart, evaluationEnd);
 
     const justification = await prisma.justification.upsert({
       where: { userId_weekStart: { userId: req.user.id, weekStart } },

@@ -63,10 +63,13 @@ export default function Dashboard() {
     };
     document.addEventListener('visibilitychange', handleVisibility);
 
-    // Check if justification is required (Thursday+ with < 3 study days)
-    api.get('/justification/check')
-      .then((res) => { if (res.data.required) setJustificationData(res.data); })
-      .catch(() => {/* non-critical */});
+    // Check if justification is required (only on Sunday/Monday)
+    const day = new Date().getUTCDay(); // Sunday=0, Monday=1
+    if (day === 0 || day === 1) {
+      api.get('/justification/check')
+        .then((res) => { if (res.data.required) setJustificationData(res.data); })
+        .catch(() => {/* non-critical */});
+    }
 
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
@@ -122,7 +125,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Justification modal — shown when user hasn't studied 3 days by Thursday */}
+      {/* Justification modal — shown when weekly target is missed */}
       {justificationData && (
         <JustificationModal
           data={justificationData}

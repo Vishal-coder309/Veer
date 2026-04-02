@@ -17,6 +17,23 @@ function getWeekStart(d = new Date()) {
   return date.toISOString().split('T')[0];
 }
 
+function addDays(dateStr, days) {
+  const d = new Date(`${dateStr}T00:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().split('T')[0];
+}
+
+function getTargetWeekStart(dateObj = new Date()) {
+  const now = new Date(dateObj);
+  const rawDay = now.getUTCDay();
+  const dayOfWeek = rawDay === 0 ? 7 : rawDay; // Mon=1 ... Sun=7
+  const currentWeekStart = getWeekStart(now);
+
+  if (dayOfWeek === 7) return currentWeekStart; // Sunday
+  if (dayOfWeek === 1) return addDays(currentWeekStart, -7); // Monday
+  return null;
+}
+
 function verifyCronSecret(req) {
   const authHeader = req.headers['authorization'] || '';
   const secret = process.env.CRON_SECRET;
@@ -78,44 +95,75 @@ router.get('/daily-reminders', async (req, res) => {
 });
 
 // GET /api/cron/inactivity-check
-// Schedule: "0 15 * * 4" (3 PM UTC Thursday = 8:30 PM IST Thursday)
+// Schedule: Sunday + Monday (see vercel.json)
 router.get('/inactivity-check', async (req, res) => {
   if (!verifyCronSecret(req)) return res.status(401).json({ error: 'Unauthorized' });
 
-  const weekStart = getWeekStart();
+  const weekStart = getTargetWeekStart();
+  if (!weekStart) {
+    return res.json({ success: true, skipped: true, reason: 'Runs only on Sunday/Monday' });
+  }
+
+  const weekEnd = addDays(weekStart, 6);
   const today = toDateStr(new Date());
+  const evaluationEnd = today < weekEnd ? today : weekEnd;
 
   try {
-    const users = await prisma.user.findMany({ where: { emailVerified: true } });
+    const users = await prisma.user.findMany({
+      where: { emailVerified: true },
+      select: { id: true, email: true, username: true, name: true },
+    });
+
+    const userIds = users.map((u) => u.id);
+    if (userIds.length === 0) {
+      return res.json({ success: true, checked: 0, flagged: 0, errors: [] });
+    }
+
+    const [sessions, existingJustifications] = await Promise.all([
+      prisma.session.findMany({
+        where: {
+          userId: { in: userIds },
+          date: { gte: weekStart, lte: evaluationEnd },
+          status: 'completed',
+        },
+        select: { userId: true, date: true },
+      }),
+      prisma.justification.findMany({
+        where: {
+          userId: { in: userIds },
+          weekStart,
+        },
+        select: { userId: true },
+      }),
+    ]);
+
+    const studyDaysByUser = new Map();
+    for (const s of sessions) {
+      if (!studyDaysByUser.has(s.userId)) {
+        studyDaysByUser.set(s.userId, new Set());
+      }
+      studyDaysByUser.get(s.userId).add(s.date);
+    }
+
+    const alreadySubmitted = new Set(existingJustifications.map((j) => j.userId));
+
     let flagged = 0;
     const errors = [];
 
     for (const user of users) {
-      const sessions = await prisma.session.findMany({
-        where: {
-          userId: user.id,
-          date: { gte: weekStart, lte: today },
-          status: 'completed',
-        },
-        select: { date: true },
-      });
-
-      const daysStudied = new Set(sessions.map((s) => s.date)).size;
+      const daysStudied = studyDaysByUser.get(user.id)?.size || 0;
       if (daysStudied >= 3) continue;
 
-      const existing = await prisma.justification.findUnique({
-        where: { userId_weekStart: { userId: user.id, weekStart } },
-      });
-      if (existing) continue;
+      if (alreadySubmitted.has(user.id)) continue;
 
       try {
         await sendMail(
           user.email,
-          `⚠️ VEER: Only ${daysStudied}/3 study days this week — justification needed`,
+          `⚠️ VEER: Weekly target missed (${daysStudied}/3 days) — justification needed`,
           `<div style="font-family:Inter,sans-serif;max-width:560px;margin:0 auto;padding:32px;">
             <h2 style="color:#dc2626;">Study Target Not Met</h2>
             <p>Hi <strong>${user.username || user.name || 'there'}</strong>,</p>
-            <p>You've studied on only <strong>${daysStudied} day${daysStudied !== 1 ? 's' : ''}</strong> this week (target: 3 days).</p>
+            <p>For the week of <strong>${new Date(`${weekStart}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</strong>, you've studied on only <strong>${daysStudied} day${daysStudied !== 1 ? 's' : ''}</strong> (target: 3 days).</p>
             <p>Please log into VEER and submit a justification to explain the reason.</p>
             <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/dashboard"
                style="display:inline-block;background:#2563eb;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:700;margin-top:16px;">
