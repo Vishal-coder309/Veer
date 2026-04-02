@@ -25,7 +25,7 @@ export default function Navbar({ onMenuClick }) {
 
       {/* Date (desktop) */}
       <p className="hidden md:block text-sm text-gray-500 dark:text-zinc-400">{today}</p>
-      <p className="lg:hidden text-sm font-semibold text-gray-900 dark:text-white">VEER</p>
+      <p className="md:hidden text-sm font-semibold text-gray-900 dark:text-white">VEER</p>
 
       {/* Right side */}
       <div className="flex items-center gap-2">
