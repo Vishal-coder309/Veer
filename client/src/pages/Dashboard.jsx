@@ -83,6 +83,14 @@ export default function Dashboard() {
   }
 
   const goalPct = data ? Math.min(Math.round((data.todayMinutes / data.dailyGoalMinutes) * 100), 100) : 0;
+  const progressBarClass =
+    goalPct >= 100
+      ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
+      : goalPct >= 70
+        ? 'bg-gradient-to-r from-blue-500 to-cyan-500'
+        : goalPct >= 40
+          ? 'bg-gradient-to-r from-amber-400 to-orange-500'
+          : 'bg-gradient-to-r from-rose-400 to-red-500';
 
   // Weekly bar chart data
   const weekLabels = data?.weekStats?.map((s) => {
@@ -187,7 +195,7 @@ export default function Dashboard() {
         </div>
         <div className="h-3 bg-gray-100 dark:bg-zinc-800 rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-zinc-500 to-zinc-600 rounded-full transition-all duration-700"
+            className={`h-full ${progressBarClass} rounded-full transition-all duration-700`}
             style={{ width: `${goalPct}%` }}
           />
         </div>
