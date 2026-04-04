@@ -285,7 +285,19 @@ export default function Settings() {
 
             {/* Days picker */}
             <div>
-              <label className="label">Reminder Days</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="label mb-0">Reminder Days</label>
+                <div className="flex items-center gap-3 text-[11px]">
+                  <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    Working day
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 text-rose-600 dark:text-rose-400">
+                    <span className="w-2 h-2 rounded-full bg-rose-500" />
+                    Rest day
+                  </span>
+                </div>
+              </div>
               <div className="flex gap-2 flex-wrap">
                 {[
                   { label: 'Mon', val: 1 }, { label: 'Tue', val: 2 }, { label: 'Wed', val: 3 },
@@ -302,11 +314,12 @@ export default function Settings() {
                           ? r.days.filter((d) => d !== val)
                           : [...r.days, val],
                       }))}
-                      className={`w-10 h-10 rounded-xl text-xs font-bold transition-all ${
+                      className={`w-12 h-10 rounded-xl text-xs font-bold border transition-all ${
                         active
-                          ? 'bg-zinc-800 text-white'
-                          : 'bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-zinc-400'
+                          ? 'bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:text-emerald-300'
+                          : 'bg-rose-500/10 border-rose-400/60 text-rose-700 dark:text-rose-300'
                       }`}
+                      title={active ? 'Working day (reminder ON)' : 'Rest day (reminder OFF)'}
                     >
                       {label}
                     </button>

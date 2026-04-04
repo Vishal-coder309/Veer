@@ -5,7 +5,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../prisma/client');
-const { sendMail, studyReminderEmail, motivationEmail, dailyProgressEmail } = require('../services/mailer');
+const { sendMail, studyReminderEmail, motivationEmail, dailyNudgeEmail, dailyProgressEmail } = require('../services/mailer');
 
 const toDateStr = (d) => new Date(d).toISOString().split('T')[0];
 
@@ -117,7 +117,7 @@ router.get('/daily-motivation', async (req, res) => {
 
     for (const user of users) {
       try {
-        const { subject, html } = motivationEmail(user.name || user.username || 'there');
+        const { subject, html } = dailyNudgeEmail(user.name || user.username || 'there');
         await sendMail(user.email, subject, html);
         sent++;
       } catch (e) {

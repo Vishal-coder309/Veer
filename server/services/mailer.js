@@ -231,6 +231,37 @@ const motivationEmail = (name) => ({
   `,
 });
 
+const dailyNudgeEmail = (name) => ({
+  subject: `🔥 Stay consistent today, ${name.split(' ')[0]}! — VEER`,
+  html: `
+    <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;background:#f8fafc;border-radius:16px;overflow:hidden;">
+      <div style="background:linear-gradient(135deg,#0f172a,#2563eb);padding:40px 32px;text-align:center;">
+        <div style="font-size:48px;margin-bottom:8px;">🔥</div>
+        <h1 style="color:#fff;margin:0;font-size:22px;font-weight:800;">A small session today makes a big difference</h1>
+        <p style="color:rgba(255,255,255,0.65);margin:8px 0 0;font-size:14px;">Consistency beats intensity for SSC CGL</p>
+      </div>
+      <div style="padding:32px;">
+        <p style="color:#1e293b;font-size:16px;">Hi <strong>${name.split(' ')[0]}</strong>,</p>
+        <p style="color:#475569;line-height:1.8;">Quick motivation for today: start with just 30 focused minutes. Once you begin, momentum takes over.</p>
+        <div style="background:#0f172a;border-radius:12px;padding:24px;margin:24px 0;text-align:center;">
+          <p style="color:#94a3b8;font-size:13px;margin:0 0 8px;text-transform:uppercase;letter-spacing:1px;">Today's Push</p>
+          <p style="color:#fff;font-size:18px;font-weight:600;line-height:1.6;margin:0;">"You do not rise to the level of your goals. You fall to the level of your systems."</p>
+          <p style="color:#64748b;font-size:13px;margin:12px 0 0;">— James Clear</p>
+        </div>
+        <div style="text-align:center;margin:28px 0;">
+          <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/study"
+             style="background:#2563eb;color:#fff;text-decoration:none;padding:14px 32px;border-radius:12px;font-weight:700;font-size:15px;display:inline-block;">
+            ▶ Start Study Session
+          </a>
+        </div>
+        <p style="color:#94a3b8;font-size:13px;margin-top:32px;border-top:1px solid #e2e8f0;padding-top:20px;">
+          VEER Study Tracker — Built for SSC CGL aspirants
+        </p>
+      </div>
+    </div>
+  `,
+});
+
 module.exports = {
   sendMail,
   otpEmail,
@@ -238,5 +269,6 @@ module.exports = {
   studyReminderEmail,
   weeklyReportEmail,
   motivationEmail,
+  dailyNudgeEmail,
   dailyProgressEmail,
 };
