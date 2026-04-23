@@ -29,6 +29,12 @@ model User {
   reminderDays         Int[]     @default([1, 2, 3, 4, 5, 6, 0])
   theme                String    @default("light")
   notificationsEnabled Boolean   @default(true)
+  offDaysCount         Int       @default(0)
+  inefficientDaysCount Int       @default(0)
+  lastEfficiencyEvaluatedDate String?
+  longBreakJustifiedFor String?
+  motivationVariantOrder Int[]   @default([])
+  motivationVariantCursor Int    @default(0)
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 

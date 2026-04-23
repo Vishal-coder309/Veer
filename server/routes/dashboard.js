@@ -109,6 +109,11 @@ router.get('/', protect, async (req, res) => {
           longest: user.streakLongest,
           lastStudiedDate: user.streakLastStudied,
         },
+        consistency: {
+          offDays: user.offDaysCount || 0,
+          inefficientDays: user.inefficientDaysCount || 0,
+          lastEvaluatedDate: user.lastEfficiencyEvaluatedDate || null,
+        },
         dailyGoalMinutes: user.dailyGoalMinutes,
         topicsProgress: {
           total: totalTopics,

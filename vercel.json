@@ -25,6 +25,10 @@
       "schedule": "0 14 * * *"
     },
     {
+      "path": "/api/cron/daily-efficiency-rollup",
+      "schedule": "30 18 * * *"
+    },
+    {
       "path": "/api/cron/inactivity-check",
       "schedule": "0 15 * * 0"
     },

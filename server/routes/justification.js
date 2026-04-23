@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../prisma/client');
 const { protect } = require('../middleware/auth');
+const { getLongBreakRequirement, toDateStr } = require('../utils/justificationPolicy');
 
 /** Returns the ISO date string of the Monday of the current week */
 function getWeekStart(dateObj = new Date()) {
@@ -47,6 +48,15 @@ async function countStudyDays(userId, startDate, endDate) {
 // GET /api/justification/check — should a justification modal be shown?
 router.get('/check', protect, async (req, res) => {
   try {
+    if (req.pendingJustification?.required) {
+      return res.json({ required: true, ...req.pendingJustification });
+    }
+
+    const longBreakRequirement = await getLongBreakRequirement(req.user.id, req.user.longBreakJustifiedFor);
+    if (longBreakRequirement.required) {
+      return res.json({ required: true, ...longBreakRequirement });
+    }
+
     const rawDay = new Date().getUTCDay();
     const dayOfWeek = rawDay === 0 ? 7 : rawDay; // Mon=1 … Sun=7
     const weekStart = getTargetWeekStart();
@@ -71,7 +81,7 @@ router.get('/check', protect, async (req, res) => {
       return res.json({ required: false, alreadySubmitted: true, daysStudied });
     }
 
-    res.json({ required: true, weekStart, weekEnd, daysStudied, threshold: 3, dayOfWeek });
+    res.json({ required: true, type: 'weekly_target', weekStart, weekEnd, daysStudied, threshold: 3, dayOfWeek });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -80,12 +90,56 @@ router.get('/check', protect, async (req, res) => {
 // POST /api/justification — submit a justification
 router.post('/', protect, async (req, res) => {
   try {
-    const { reason, category, weekStart: providedWeekStart } = req.body;
+    const { reason, category, weekStart: providedWeekStart, type, lastStudyDate: providedLastStudyDate } = req.body;
     if (!reason || reason.trim().length < 20) {
       return res.status(400).json({
         success: false,
         message: 'Please provide a detailed reason (min 20 characters)',
       });
+    }
+
+    const longBreakRequirement = req.pendingJustification?.required
+      ? req.pendingJustification
+      : await getLongBreakRequirement(req.user.id, req.user.longBreakJustifiedFor);
+
+    if (type === 'long_break' || longBreakRequirement.required) {
+      if (!longBreakRequirement.required) {
+        return res.status(400).json({
+          success: false,
+          message: 'No long-break justification is pending',
+        });
+      }
+
+      if (providedLastStudyDate && providedLastStudyDate !== longBreakRequirement.lastStudyDate) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid long-break justification payload',
+        });
+      }
+
+      const referenceKey = `long-break-${longBreakRequirement.lastStudyDate}`;
+      const justification = await prisma.justification.upsert({
+        where: { userId_weekStart: { userId: req.user.id, weekStart: referenceKey } },
+        update: {
+          reason: reason.trim(),
+          category: category || 'long_break',
+          daysStudied: 0,
+        },
+        create: {
+          userId: req.user.id,
+          weekStart: referenceKey,
+          reason: reason.trim(),
+          category: category || 'long_break',
+          daysStudied: 0,
+        },
+      });
+
+      await prisma.user.update({
+        where: { id: req.user.id },
+        data: { longBreakJustifiedFor: longBreakRequirement.lastStudyDate },
+      });
+
+      return res.status(201).json({ success: true, type: 'long_break', justification });
     }
 
     const computedWeekStart = getTargetWeekStart();
@@ -106,7 +160,7 @@ router.post('/', protect, async (req, res) => {
     const weekStart = computedWeekStart;
 
     const weekEnd = addDays(weekStart, 6);
-    const today = new Date().toISOString().split('T')[0];
+    const today = toDateStr();
     const evaluationEnd = today < weekEnd ? today : weekEnd;
     const daysStudied = await countStudyDays(req.user.id, weekStart, evaluationEnd);
 
@@ -122,7 +176,7 @@ router.post('/', protect, async (req, res) => {
       },
     });
 
-    res.status(201).json({ success: true, justification });
+    res.status(201).json({ success: true, type: 'weekly_target', justification });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

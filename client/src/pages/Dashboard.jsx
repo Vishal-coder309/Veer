@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { dashboardAPI } from '../utils/api';
-import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
-import JustificationModal from '../components/JustificationModal';
 import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement,
   Title, Tooltip, Legend, ArcElement,
@@ -45,7 +43,6 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [justificationData, setJustificationData] = useState(null); // non-null = show modal
 
   const fetchDashboard = () => {
     dashboardAPI.get()
@@ -62,14 +59,6 @@ export default function Dashboard() {
       if (document.visibilityState === 'visible') fetchDashboard();
     };
     document.addEventListener('visibilitychange', handleVisibility);
-
-    // Check if justification is required (only on Sunday/Monday)
-    const day = new Date().getUTCDay(); // Sunday=0, Monday=1
-    if (day === 0 || day === 1) {
-      api.get('/justification/check')
-        .then((res) => { if (res.data.required) setJustificationData(res.data); })
-        .catch(() => {/* non-critical */});
-    }
 
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
@@ -135,14 +124,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Justification modal — shown when weekly target is missed */}
-      {justificationData && (
-        <JustificationModal
-          data={justificationData}
-          onClose={() => setJustificationData(null)}
-        />
-      )}
-
       {/* Greeting */}
       <div>
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -156,7 +137,7 @@ export default function Dashboard() {
       </div>
 
       {/* Top stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard
           icon="⏰"
           label="Today"
@@ -184,6 +165,13 @@ export default function Dashboard() {
           value={`${Math.round((data?.totalMinutesAllTime || 0) / 60)}h`}
           sub="All time"
           color="purple"
+        />
+        <StatCard
+          icon="📉"
+          label="Off / Inefficient"
+          value={`${data?.consistency?.offDays || 0} / ${data?.consistency?.inefficientDays || 0}`}
+          sub="Off days / below goal"
+          color="red"
         />
       </div>
 

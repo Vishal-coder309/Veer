@@ -2,9 +2,42 @@ const express = require('express');
 const router = express.Router();
 const prisma = require('../prisma/client');
 const { protect } = require('../middleware/auth');
-const { sendMail, motivationEmail } = require('../services/mailer');
+const { sendMail, motivationEmail, motivationVariantCount } = require('../services/mailer');
 
 const toDateStr = () => new Date().toISOString().split('T')[0];
+
+function shuffle(array) {
+  const copy = [...array];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function buildFreshOrder(count, lastSentVariantIndex = null) {
+  let order = shuffle(Array.from({ length: count }, (_, i) => i));
+  if (count > 1 && lastSentVariantIndex !== null && order[0] === lastSentVariantIndex) {
+    [order[0], order[1]] = [order[1], order[0]];
+  }
+  return order;
+}
+
+function normalizeOrder(order, count) {
+  if (!Array.isArray(order) || order.length !== count) {
+    return null;
+  }
+
+  const expected = new Set(Array.from({ length: count }, (_, i) => i));
+  for (const value of order) {
+    if (!Number.isInteger(value) || !expected.has(value)) {
+      return null;
+    }
+    expected.delete(value);
+  }
+
+  return expected.size === 0 ? order : null;
+}
 
 // GET /api/daily/today
 router.get('/today', protect, async (req, res) => {
@@ -44,9 +77,50 @@ router.post('/skip', protect, async (req, res) => {
       create: { userId: req.user.id, date, status: 'skipped' },
     });
     // Send motivation email async (non-blocking)
-    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
-    const { subject, html } = motivationEmail(user.name || user.username || 'there');
-    sendMail(user.email, subject, html).catch((e) => console.warn('Motivation email failed:', e.message));
+    (async () => {
+      const user = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          username: true,
+          motivationVariantOrder: true,
+          motivationVariantCursor: true,
+        },
+      });
+
+      if (!user?.email || motivationVariantCount <= 0) return;
+
+      const currentOrder = normalizeOrder(user.motivationVariantOrder, motivationVariantCount)
+        || buildFreshOrder(motivationVariantCount);
+      const currentCursor = Number.isInteger(user.motivationVariantCursor)
+        && user.motivationVariantCursor >= 0
+        && user.motivationVariantCursor < motivationVariantCount
+        ? user.motivationVariantCursor
+        : 0;
+
+      const variantIndex = currentOrder[currentCursor] ?? currentOrder[0] ?? 0;
+      let nextCursor = currentCursor + 1;
+      let nextOrder = currentOrder;
+
+      if (nextCursor >= motivationVariantCount) {
+        nextCursor = 0;
+        nextOrder = buildFreshOrder(motivationVariantCount, variantIndex);
+      }
+
+      const { subject, html } = motivationEmail(user.name || user.username || 'there', { variantIndex });
+      await sendMail(user.email, subject, html);
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          motivationVariantOrder: nextOrder,
+          motivationVariantCursor: nextCursor,
+        },
+      });
+    })().catch((e) => console.warn('Motivation email failed:', e.message));
+
     res.json({ success: true, commitment });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

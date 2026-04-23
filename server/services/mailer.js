@@ -199,37 +199,138 @@ const otpEmail = (email, otp) => ({
   `,
 });
 
-const motivationEmail = (name) => ({
-  subject: `💪 You've got this, ${name.split(' ')[0]}! — VEER`,
-  html: `
-    <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;background:#f8fafc;border-radius:16px;overflow:hidden;">
-      <div style="background:linear-gradient(135deg,#18181b,#3f3f46);padding:40px 32px;text-align:center;">
-        <div style="font-size:48px;margin-bottom:8px;">💪</div>
-        <h1 style="color:#fff;margin:0;font-size:22px;font-weight:800;">It's okay to take a break</h1>
-        <p style="color:rgba(255,255,255,0.6);margin:8px 0 0;font-size:14px;">But remember — your dream is waiting</p>
-      </div>
-      <div style="padding:32px;">
-        <p style="color:#1e293b;font-size:16px;">Hi <strong>${name.split(' ')[0]}</strong>,</p>
-        <p style="color:#475569;line-height:1.8;">You've marked today as a rest day. That's completely fine — rest is part of the journey. But here's a reminder of why you started:</p>
-        <div style="background:#18181b;border-radius:12px;padding:24px;margin:24px 0;text-align:center;">
-          <p style="color:#a1a1aa;font-size:13px;margin:0 0 8px;text-transform:uppercase;letter-spacing:1px;">Today's Motivation</p>
-          <p style="color:#fff;font-size:18px;font-weight:600;line-height:1.6;margin:0;">"Success is the sum of small efforts, repeated day in and day out."</p>
-          <p style="color:#71717a;font-size:13px;margin:12px 0 0;">— Robert Collier</p>
+const motivationVariants = [
+  {
+    icon: '💪',
+    title: "It's okay to take a break",
+    subtitle: 'Rest today, reset tomorrow',
+    intro: "You've marked today as a rest day. That is completely fine. Rest is part of long-term consistency.",
+    quote: 'Success is the sum of small efforts, repeated day in and day out.',
+    author: 'Robert Collier',
+    outro: 'SSC CGL is competitive. Come back tomorrow stronger and log even 30 minutes.',
+    cta: "📖 Plan Tomorrow's Study",
+    ctaPath: '/log',
+  },
+  {
+    icon: '🔥',
+    title: 'Momentum starts small',
+    subtitle: 'One focused session can restart your streak',
+    intro: 'A skipped day does not define your prep. What matters is the next honest effort.',
+    quote: 'You do not rise to the level of your goals. You fall to the level of your systems.',
+    author: 'James Clear',
+    outro: 'Make tomorrow simple: choose one topic, set one timer, and begin.',
+    cta: '▶ Start with 30 Minutes',
+    ctaPath: '/study',
+  },
+  {
+    icon: '🎯',
+    title: 'Your target is still in sight',
+    subtitle: 'A single day never decides the final result',
+    intro: 'Every aspirant has off days. The difference is returning quickly with intention.',
+    quote: 'It always seems impossible until it is done.',
+    author: 'Nelson Mandela',
+    outro: 'Tomorrow, pick your toughest subject first and build confidence early.',
+    cta: '🗂 Set Tomorrow Plan',
+    ctaPath: '/log',
+  },
+  {
+    icon: '📈',
+    title: 'Progress is not linear',
+    subtitle: 'Consistency wins over perfection',
+    intro: 'Missing one day is normal. Missing many starts a pattern. Break the pattern early.',
+    quote: 'Small disciplines repeated with consistency every day lead to great achievements.',
+    author: 'John C. Maxwell',
+    outro: 'Get back in rhythm with a short revision session and one practice set.',
+    cta: '✅ Commit for Tomorrow',
+    ctaPath: '/log',
+  },
+  {
+    icon: '⚡',
+    title: 'Action beats overthinking',
+    subtitle: 'Start before you feel fully ready',
+    intro: 'A low-energy day can still hold a small win. Even 20 focused minutes count.',
+    quote: 'Do what you can, with what you have, where you are.',
+    author: 'Theodore Roosevelt',
+    outro: 'Tomorrow, begin with a timer and let momentum do the rest.',
+    cta: '⏱ Start Study Timer',
+    ctaPath: '/study',
+  },
+  {
+    icon: '🏆',
+    title: 'Discipline builds confidence',
+    subtitle: 'Each comeback makes you stronger',
+    intro: 'Today may be light, but your goal is still alive. Restarting quickly is a superpower.',
+    quote: 'Success is nothing more than a few simple disciplines, practiced every day.',
+    author: 'Jim Rohn',
+    outro: 'Show up tomorrow, even for a short session. That is how streaks are rebuilt.',
+    cta: '📚 Resume Preparation',
+    ctaPath: '/study',
+  },
+];
+
+const motivationVariantCount = motivationVariants.length;
+
+const getMotivationVariantByIndex = (variantIndex = 0) => {
+  const normalizedIndex = ((variantIndex % motivationVariants.length) + motivationVariants.length) % motivationVariants.length;
+  return motivationVariants[normalizedIndex];
+};
+
+const getMotivationVariant = (name, dateSeed = new Date()) => {
+  const firstName = (name || 'there').split(' ')[0];
+  const date = new Date(dateSeed);
+  const utcStart = Date.UTC(date.getUTCFullYear(), 0, 0);
+  const utcCurrent = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+  const dayOfYear = Math.floor((utcCurrent - utcStart) / (24 * 60 * 60 * 1000));
+  const nameHash = firstName.toLowerCase().split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  const index = (dayOfYear + nameHash) % motivationVariants.length;
+  return motivationVariants[index];
+};
+
+const motivationEmail = (name, options = {}) => {
+  const firstName = (name || 'there').split(' ')[0];
+
+  let variant;
+  if (typeof options === 'number') {
+    variant = getMotivationVariantByIndex(options);
+  } else if (options && Number.isInteger(options.variantIndex)) {
+    variant = getMotivationVariantByIndex(options.variantIndex);
+  } else {
+    const dateSeed = options?.dateSeed || new Date();
+    variant = getMotivationVariant(firstName, dateSeed);
+  }
+
+  return {
+    subject: `${variant.icon} Keep going, ${firstName}! — VEER`,
+    html: `
+      <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;background:#f8fafc;border-radius:16px;overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#18181b,#3f3f46);padding:40px 32px;text-align:center;">
+          <div style="font-size:48px;margin-bottom:8px;">${variant.icon}</div>
+          <h1 style="color:#fff;margin:0;font-size:22px;font-weight:800;">${variant.title}</h1>
+          <p style="color:rgba(255,255,255,0.6);margin:8px 0 0;font-size:14px;">${variant.subtitle}</p>
         </div>
-        <p style="color:#475569;line-height:1.8;">SSC CGL is competitive. Every day matters. Come back tomorrow stronger — open VEER and log even 30 minutes.</p>
-        <div style="text-align:center;margin:28px 0;">
-          <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}/log"
-             style="background:#18181b;color:#fff;text-decoration:none;padding:14px 32px;border-radius:12px;font-weight:700;font-size:15px;display:inline-block;">
-            📖 Plan Tomorrow's Study
-          </a>
+        <div style="padding:32px;">
+          <p style="color:#1e293b;font-size:16px;">Hi <strong>${firstName}</strong>,</p>
+          <p style="color:#475569;line-height:1.8;">${variant.intro}</p>
+          <div style="background:#18181b;border-radius:12px;padding:24px;margin:24px 0;text-align:center;">
+            <p style="color:#a1a1aa;font-size:13px;margin:0 0 8px;text-transform:uppercase;letter-spacing:1px;">Today's Motivation</p>
+            <p style="color:#fff;font-size:18px;font-weight:600;line-height:1.6;margin:0;">"${variant.quote}"</p>
+            <p style="color:#71717a;font-size:13px;margin:12px 0 0;">- ${variant.author}</p>
+          </div>
+          <p style="color:#475569;line-height:1.8;">${variant.outro}</p>
+          <div style="text-align:center;margin:28px 0;">
+            <a href="${process.env.CLIENT_URL || 'http://localhost:3000'}${variant.ctaPath}"
+               style="background:#18181b;color:#fff;text-decoration:none;padding:14px 32px;border-radius:12px;font-weight:700;font-size:15px;display:inline-block;">
+              ${variant.cta}
+            </a>
+          </div>
+          <p style="color:#94a3b8;font-size:13px;margin-top:32px;border-top:1px solid #e2e8f0;padding-top:20px;">
+            VEER Study Tracker - Built for SSC CGL aspirants 🎯
+          </p>
         </div>
-        <p style="color:#94a3b8;font-size:13px;margin-top:32px;border-top:1px solid #e2e8f0;padding-top:20px;">
-          VEER Study Tracker — Built for SSC CGL aspirants 🎯
-        </p>
       </div>
-    </div>
-  `,
-});
+    `,
+  };
+};
 
 const dailyNudgeEmail = (name) => ({
   subject: `🔥 Stay consistent today, ${name.split(' ')[0]}! — VEER`,
@@ -269,6 +370,7 @@ module.exports = {
   studyReminderEmail,
   weeklyReportEmail,
   motivationEmail,
+  motivationVariantCount,
   dailyNudgeEmail,
   dailyProgressEmail,
 };

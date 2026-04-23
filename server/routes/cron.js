@@ -41,6 +41,30 @@ function verifyCronSecret(req) {
   return authHeader === `Bearer ${secret}`;
 }
 
+function getIstDateStr(dateObj = new Date()) {
+  const istNow = new Date(dateObj.getTime() + 5.5 * 60 * 60 * 1000);
+  const y = istNow.getUTCFullYear();
+  const m = String(istNow.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(istNow.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function listDatesInclusive(startDateStr, endDateStr) {
+  const dates = [];
+  const start = new Date(`${startDateStr}T00:00:00.000Z`);
+  const end = new Date(`${endDateStr}T00:00:00.000Z`);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end) {
+    return dates;
+  }
+
+  for (const d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+    dates.push(d.toISOString().split('T')[0]);
+  }
+
+  return dates;
+}
+
 // GET /api/cron/daily-reminders
 // Schedule: "0 14 * * *" (2 PM UTC = 7:30 PM IST)
 router.get('/daily-reminders', async (req, res) => {
@@ -315,6 +339,243 @@ router.get('/inactivity-check', async (req, res) => {
     }
 
     res.json({ success: true, checked: users.length, flagged, errors });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// GET /api/cron/daily-efficiency-rollup
+// Schedule: "30 18 * * *" (6:30 PM UTC = 12:00 AM IST)
+router.get('/daily-efficiency-rollup', async (req, res) => {
+  if (!verifyCronSecret(req)) return res.status(401).json({ error: 'Unauthorized' });
+
+  const istToday = getIstDateStr(new Date());
+  const evaluateDate = addDays(istToday, -1);
+
+  try {
+    const users = await prisma.user.findMany({
+      where: {
+        emailVerified: true,
+        OR: [
+          { lastEfficiencyEvaluatedDate: null },
+          { lastEfficiencyEvaluatedDate: { not: evaluateDate } },
+        ],
+      },
+      select: {
+        id: true,
+        dailyGoalMinutes: true,
+        offDaysCount: true,
+        inefficientDaysCount: true,
+      },
+    });
+
+    if (users.length === 0) {
+      return res.json({ success: true, checked: 0, updated: 0, evaluateDate });
+    }
+
+    const userIds = users.map((u) => u.id);
+
+    const [sessions, commitments] = await Promise.all([
+      prisma.session.findMany({
+        where: {
+          userId: { in: userIds },
+          status: 'completed',
+          date: evaluateDate,
+        },
+        select: { userId: true, durationMinutes: true },
+      }),
+      prisma.dailyCommitment.findMany({
+        where: {
+          userId: { in: userIds },
+          date: evaluateDate,
+        },
+        select: { userId: true, studyMinutes: true },
+      }),
+    ]);
+
+    const timerMinutesByUser = new Map();
+    for (const s of sessions) {
+      timerMinutesByUser.set(s.userId, (timerMinutesByUser.get(s.userId) || 0) + (s.durationMinutes || 0));
+    }
+
+    const loggedMinutesByUser = new Map();
+    for (const c of commitments) {
+      loggedMinutesByUser.set(c.userId, Number(c.studyMinutes || 0));
+    }
+
+    let updated = 0;
+    const offDayUsers = [];
+    const inefficientDayUsers = [];
+
+    for (const user of users) {
+      const timerMinutes = timerMinutesByUser.get(user.id) || 0;
+      const loggedMinutes = loggedMinutesByUser.get(user.id) || 0;
+      const totalMinutes = Math.max(timerMinutes, loggedMinutes);
+
+      const data = { lastEfficiencyEvaluatedDate: evaluateDate };
+
+      if (totalMinutes <= 0) {
+        data.offDaysCount = (user.offDaysCount || 0) + 1;
+        offDayUsers.push(user.id);
+      } else if (totalMinutes < user.dailyGoalMinutes) {
+        data.inefficientDaysCount = (user.inefficientDaysCount || 0) + 1;
+        inefficientDayUsers.push(user.id);
+      }
+
+      await prisma.user.update({ where: { id: user.id }, data });
+      updated++;
+    }
+
+    res.json({
+      success: true,
+      checked: users.length,
+      updated,
+      evaluateDate,
+      offDaysAdded: offDayUsers.length,
+      inefficientDaysAdded: inefficientDayUsers.length,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// GET /api/cron/backfill-efficiency-counters
+// Manual one-time (or re-runnable) historical recomputation.
+// Query params:
+// - startDate=YYYY-MM-DD (optional; default: first session date per user)
+// - endDate=YYYY-MM-DD (optional; default: yesterday IST)
+// - dryRun=true|false (optional; default: false)
+router.get('/backfill-efficiency-counters', async (req, res) => {
+  if (!verifyCronSecret(req)) return res.status(401).json({ error: 'Unauthorized' });
+
+  const dryRun = String(req.query.dryRun || 'false').toLowerCase() === 'true';
+  const overrideStartDate = req.query.startDate;
+  const overrideEndDate = req.query.endDate;
+
+  const yesterdayIst = addDays(getIstDateStr(new Date()), -1);
+  const endDate = overrideEndDate || yesterdayIst;
+
+  try {
+    const users = await prisma.user.findMany({
+      where: { emailVerified: true },
+      select: {
+        id: true,
+        dailyGoalMinutes: true,
+      },
+    });
+
+    if (users.length === 0) {
+      return res.json({ success: true, checked: 0, updated: 0, dryRun, endDate });
+    }
+
+    const userIds = users.map((u) => u.id);
+
+    const [sessions, commitments] = await Promise.all([
+      prisma.session.findMany({
+        where: {
+          userId: { in: userIds },
+          status: 'completed',
+          date: { lte: endDate },
+        },
+        select: { userId: true, date: true, durationMinutes: true },
+      }),
+      prisma.dailyCommitment.findMany({
+        where: {
+          userId: { in: userIds },
+          date: { lte: endDate },
+        },
+        select: { userId: true, date: true, studyMinutes: true },
+      }),
+    ]);
+
+    const timerMinutesByUserDate = new Map();
+    for (const s of sessions) {
+      const key = `${s.userId}::${s.date}`;
+      timerMinutesByUserDate.set(key, (timerMinutesByUserDate.get(key) || 0) + (s.durationMinutes || 0));
+    }
+
+    const loggedMinutesByUserDate = new Map();
+    for (const c of commitments) {
+      const key = `${c.userId}::${c.date}`;
+      loggedMinutesByUserDate.set(key, Number(c.studyMinutes || 0));
+    }
+
+    const minDateByUser = new Map();
+    for (const s of sessions) {
+      const existing = minDateByUser.get(s.userId);
+      if (!existing || s.date < existing) {
+        minDateByUser.set(s.userId, s.date);
+      }
+    }
+
+    let updated = 0;
+    let skipped = 0;
+    let totalOffDays = 0;
+    let totalInefficientDays = 0;
+
+    for (const user of users) {
+      const derivedStartDate = minDateByUser.get(user.id);
+      const startDate = overrideStartDate || derivedStartDate;
+
+      if (!startDate) {
+        skipped++;
+        continue;
+      }
+
+      const allDates = listDatesInclusive(startDate, endDate);
+      if (allDates.length === 0) {
+        skipped++;
+        continue;
+      }
+
+      let offDays = 0;
+      let inefficientDays = 0;
+
+      for (const date of allDates) {
+        const key = `${user.id}::${date}`;
+        const timerMinutes = timerMinutesByUserDate.get(key) || 0;
+        const loggedMinutes = loggedMinutesByUserDate.get(key) || 0;
+        const totalMinutes = Math.max(timerMinutes, loggedMinutes);
+
+        if (totalMinutes <= 0) {
+          offDays++;
+        } else if (totalMinutes < user.dailyGoalMinutes) {
+          inefficientDays++;
+        }
+      }
+
+      totalOffDays += offDays;
+      totalInefficientDays += inefficientDays;
+
+      if (!dryRun) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            offDaysCount: offDays,
+            inefficientDaysCount: inefficientDays,
+            lastEfficiencyEvaluatedDate: endDate,
+          },
+        });
+      }
+
+      updated++;
+    }
+
+    res.json({
+      success: true,
+      dryRun,
+      checked: users.length,
+      updated,
+      skipped,
+      range: {
+        startDate: overrideStartDate || 'per-user-first-session',
+        endDate,
+      },
+      totals: {
+        offDays: totalOffDays,
+        inefficientDays: totalInefficientDays,
+      },
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
