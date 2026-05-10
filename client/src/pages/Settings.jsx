@@ -4,6 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { authAPI } from '../utils/api';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
+import ConfirmModal from '../components/ConfirmModal';
 
 export default function Settings() {
   const { user, updateUser } = useAuth();
@@ -24,6 +25,8 @@ export default function Settings() {
   const [savingReminder, setSavingReminder] = useState(false);
   const [changingPin, setChangingPin] = useState(false);
   const [pinForm, setPinForm] = useState({ pin: '', confirm: '' });
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingTarget, setPendingTarget] = useState(null);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -197,6 +200,83 @@ export default function Settings() {
         <button onClick={handleSave} disabled={saving} className="btn-primary mt-4">
           {saving ? 'Saving...' : 'Save Notification Settings'}
         </button>
+
+        {/* Global email toggle */}
+        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-zinc-800">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-gray-900 dark:text-white">All email notifications</p>
+              <p className="text-sm text-gray-500 dark:text-zinc-400">Enable or disable all email reminders and reports</p>
+            </div>
+            <>
+              <button
+                type="button"
+                onClick={async () => {
+                  const emailsEnabled = form.notificationsEnabled || reminder.enabled;
+                  const target = !emailsEnabled;
+
+                  if (!target) {
+                    // disabling → show modal
+                    setPendingTarget(target);
+                    setShowConfirmModal(true);
+                    return;
+                  }
+
+                  // enabling → proceed directly
+                  setSaving(true);
+                  try {
+                    await Promise.all([
+                      authAPI.updateProfile({ notificationsEnabled: target }),
+                      api.put('/auth/reminder-settings', { enabled: target }),
+                    ]);
+                    updateUser({ notificationsEnabled: target, reminderSettings: { ...reminder, enabled: target } });
+                    setForm((f) => ({ ...f, notificationsEnabled: target }));
+                    setReminder((r) => ({ ...r, enabled: target }));
+                    toast.success('Email notifications enabled');
+                  } catch (err) {
+                    toast.error('Failed to update email settings');
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+                className={`relative inline-flex w-12 h-6 rounded-full transition-colors duration-200 ${
+                  form.notificationsEnabled || reminder.enabled ? 'bg-zinc-800' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <span className={`inline-block w-5 h-5 rounded-full bg-white shadow-sm transform transition-transform duration-200 mt-0.5 ${
+                  form.notificationsEnabled || reminder.enabled ? 'translate-x-6' : 'translate-x-0.5'
+                }`} />
+              </button>
+
+              <ConfirmModal
+                open={showConfirmModal}
+                title="Disable all emails"
+                message="Disable all email notifications? You will stop receiving reminders, reports and other VEER emails."
+                confirmLabel="Disable"
+                cancelLabel="Keep enabled"
+                onCancel={() => { setShowConfirmModal(false); setPendingTarget(null); }}
+                onConfirm={async () => {
+                  const target = pendingTarget === null ? false : pendingTarget;
+                  setShowConfirmModal(false);
+                  setPendingTarget(null);
+                  setSaving(true);
+                  try {
+                    await Promise.all([
+                      authAPI.updateProfile({ notificationsEnabled: target }),
+                      api.put('/auth/reminder-settings', { enabled: target }),
+                    ]);
+                    updateUser({ notificationsEnabled: target, reminderSettings: { ...reminder, enabled: target } });
+                    setForm((f) => ({ ...f, notificationsEnabled: target }));
+                    setReminder((r) => ({ ...r, enabled: target }));
+                    toast.success('All emails disabled');
+                  } catch (err) {
+                    toast.error('Failed to update email settings');
+                  } finally { setSaving(false); }
+                }}
+              />
+            </>
+          </div>
+        </div>
 
         {/* Email action buttons */}
         <div className="mt-5 pt-4 border-t border-gray-100 dark:border-zinc-800 space-y-3">
